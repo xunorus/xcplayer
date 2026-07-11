@@ -8,9 +8,15 @@ Cross country player — reproductor de música local con descarga por link (yt-
 (AES-256-GCM); la página lo descifra en el navegador con la contraseña. El código
 es libre, el APK no.
 
+El APK está firmado con la clave de release **energiaSonora** (alias `xcplayer` en
+`~/xunserver/keys/energiasonora.keystore`; credenciales en `android/keystore.properties`,
+fuera de git). SHA-256 del certificado:
+`303689b31c4083edb6ee9146665d4fc5c9c2e6812139cd352abbb0c827c82db1`
+
 Para re-publicar tras un rebuild:
 
 ```bash
+npm run apk:release                      # build firmado → xcplayer.apk
 node tools/encrypt-apk.js "<password>"   # xcplayer.apk → docs/xcplayer.apk.enc
 git add docs/xcplayer.apk.enc && git commit -m "apk vX.Y" && git push
 ```

@@ -5,7 +5,8 @@
   "scripts": {
     "start": "node server.js",
     "copy": "mkdir -p www && cp index.html style.css app.js icon.svg manifest.json www/ && npx cap copy android",
-    "apk": "npm run copy && cd android && ./gradlew assembleDebug --no-daemon"
+    "apk": "npm run copy && cd android && ./gradlew assembleDebug --no-daemon",
+    "apk:release": "npm run copy && cd android && ./gradlew assembleRelease --no-daemon && cp app/build/outputs/apk/release/app-release.apk ../xcplayer.apk"
   },
   "devDependencies": {
     "@capacitor/android": "^7.0.0",
