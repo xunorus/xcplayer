@@ -1,0 +1,9 @@
+{
+  "appId": "com.xunorus.xcplayer",
+  "appName": "XC Player",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "http",
+    "cleartext": true
+  }
+}

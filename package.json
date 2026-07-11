@@ -1,0 +1,15 @@
+{
+  "name": "xcplayer",
+  "version": "1.0.0",
+  "description": "XC Player — cross country music player",
+  "scripts": {
+    "start": "node server.js",
+    "copy": "mkdir -p www && cp index.html style.css app.js icon.svg manifest.json www/ && npx cap copy android",
+    "apk": "npm run copy && cd android && ./gradlew assembleDebug --no-daemon"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/core": "^7.0.0"
+  }
+}

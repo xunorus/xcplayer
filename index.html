@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1424">
+<title>XC Player</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <img src="icon.svg" alt="" class="logo">
+  <div class="title">
+    <h1>XC Player</h1>
+    <span class="sub">cross country player · <span id="appVer"></span></span>
+  </div>
+  <button id="btnSettings" class="icon-btn" title="Ajustes">⚙</button>
+</header>
+
+<section class="stats">
+  <div class="chip"><span id="statTracks">0</span><label>tracks</label></div>
+  <div class="chip"><span id="statDuration">0:00</span><label>duración</label></div>
+  <div class="chip"><span id="statSize">0 MB</span><label>en uso</label></div>
+</section>
+
+<section class="add">
+  <div class="add-row">
+    <input id="urlInput" type="url" placeholder="Pegá un link de canción o playlist…" autocomplete="off" spellcheck="false">
+    <button id="btnAdd">Agregar</button>
+  </div>
+  <pre id="log" class="log" hidden></pre>
+</section>
+
+<main>
+  <ul id="playlist" class="playlist"></ul>
+  <p id="empty" class="empty">Sin música todavía.<br>Pegá un link arriba para despegar 🪂</p>
+</main>
+
+<footer class="player" id="player">
+  <div class="np">
+    <div id="npTitle" class="np-title">—</div>
+  </div>
+  <div class="seek-row">
+    <span id="tCur" class="time">0:00</span>
+    <input id="seek" type="range" min="0" max="1000" value="0">
+    <span id="tTot" class="time">0:00</span>
+  </div>
+  <div class="controls">
+    <button id="btnShuffle" class="ctl small" title="Aleatorio">🔀</button>
+    <button id="btnPrev" class="ctl" title="Anterior">⏮</button>
+    <button id="btnPlay" class="ctl big" title="Play/Pausa">▶</button>
+    <button id="btnNext" class="ctl" title="Siguiente">⏭</button>
+    <button id="btnRepeat" class="ctl small" title="Repetir">🔁</button>
+  </div>
+</footer>
+
+<dialog id="dlgSettings">
+  <h2>Ajustes <span class="ver" id="appVer2"></span></h2>
+  <label class="field check" id="modeRow" hidden>
+    <input type="checkbox" id="modeServer">
+    <span>Descargar con el server de la Mac (en vez de yt-dlp en el teléfono)</span>
+  </label>
+  <label class="field">
+    Servidor (Mac con yt-dlp)
+    <input id="serverInput" type="url" placeholder="http://192.168.1.33:8977">
+  </label>
+  <div class="dlg-actions">
+    <button id="btnImport">Importar mp3 de la carpeta</button>
+    <button id="btnTest">Probar conexión</button>
+    <button id="btnUpdateYt" hidden>Actualizar yt-dlp</button>
+  </div>
+  <p id="settingsMsg" class="msg"></p>
+  <p class="hint">Los tracks se guardan localmente en este dispositivo. Importar/probar conexión usan el server de la Mac; con yt-dlp en el teléfono no hace falta ningún server.</p>
+  <div class="dlg-actions">
+    <button id="btnCloseSettings" class="primary">Cerrar</button>
+  </div>
+  <p class="credits">XC Player 🪂 · un proyecto de <a href="https://energiasonora.eth.limo" target="_blank" rel="noopener">energiasonora.eth</a></p>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>

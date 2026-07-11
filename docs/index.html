@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>XC Player — Descargar APK</title>
+<link rel="icon" href="icon.svg">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #0b1424;
+  --card: #121f36;
+  --card2: #182741;
+  --text: #e8f0fb;
+  --dim: #8aa2c0;
+  --accent: #4cc3ff;
+  --accent2: #fb923c;
+  --danger: #f87171;
+  --ok: #4ade80;
+  --radius: 14px;
+}
+html, body { height: 100%; }
+body {
+  background: linear-gradient(180deg, #0e1a30 0%, var(--bg) 40%);
+  color: var(--text);
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.card {
+  background: var(--card); border-radius: var(--radius);
+  padding: 32px 28px; max-width: 420px; width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,.4);
+}
+.head { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
+.head img { width: 52px; height: 52px; border-radius: 13px; }
+h1 { font-size: 1.4rem; letter-spacing: .5px; }
+.sub { font-size: .72rem; color: var(--dim); letter-spacing: 2px; text-transform: uppercase; }
+.meta { color: var(--dim); font-size: .85rem; margin: 14px 0 22px; line-height: 1.5; }
+.meta b { color: var(--text); font-weight: 600; }
+label { display: block; font-size: .78rem; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+input[type=password] {
+  width: 100%; background: var(--card2); border: 1px solid #24344f; color: var(--text);
+  border-radius: var(--radius); padding: 13px 14px; font-size: 1rem; outline: none;
+  margin-bottom: 14px;
+}
+input[type=password]:focus { border-color: var(--accent); }
+button {
+  width: 100%; background: var(--accent); color: #06263a; border: none;
+  border-radius: var(--radius); padding: 14px; font-weight: 700; font-size: 1rem;
+  cursor: pointer; transition: opacity .15s;
+}
+button:disabled { opacity: .45; cursor: default; }
+.bar-wrap {
+  margin-top: 16px; background: var(--card2); border-radius: 8px; height: 8px;
+  overflow: hidden; display: none;
+}
+.bar { height: 100%; width: 0%; background: var(--accent); border-radius: 8px; transition: width .2s; }
+.status { margin-top: 12px; font-size: .88rem; color: var(--dim); min-height: 1.3em; }
+.status.err { color: var(--danger); }
+.status.ok { color: var(--ok); }
+.note {
+  margin-top: 22px; padding-top: 16px; border-top: 1px solid #24344f;
+  font-size: .78rem; color: var(--dim); line-height: 1.55;
+}
+a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="head">
+    <img src="icon.svg" alt="XC Player">
+    <div>
+      <h1>XC Player</h1>
+      <div class="sub">Cross country player</div>
+    </div>
+  </div>
+  <p class="meta">
+    Reproductor de música offline con descarga por link (yt-dlp embebido).<br>
+    <b>v1.4</b> · Android (arm64) · ~56 MB
+  </p>
+  <label for="pass">Contraseña</label>
+  <input type="password" id="pass" autocomplete="off" placeholder="••••••••">
+  <button id="btn">Descargar APK</button>
+  <div class="bar-wrap" id="barWrap"><div class="bar" id="bar"></div></div>
+  <div class="status" id="status"></div>
+  <p class="note">
+    El APK está cifrado (AES-256-GCM); se descifra acá mismo, en tu navegador.
+    Sin la contraseña no hay descarga.<br>
+    Al instalar, Android va a pedir permitir "orígenes desconocidos".<br>
+    Código fuente: <a href="https://github.com/xunorus/xcplayer">github.com/xunorus/xcplayer</a>
+  </p>
+</div>
+<script>
+const ENC_URL = 'xcplayer.apk.enc';
+const ITERATIONS = 310000; // debe coincidir con tools/encrypt-apk.js
+
+const btn = document.getElementById('btn');
+const passEl = document.getElementById('pass');
+const statusEl = document.getElementById('status');
+const bar = document.getElementById('bar');
+const barWrap = document.getElementById('barWrap');
+
+let cached = null; // el .enc descargado, para no re-bajar 56MB si la pass estaba mal
+
+function setStatus(msg, cls) {
+  statusEl.textContent = msg;
+  statusEl.className = 'status' + (cls ? ' ' + cls : '');
+}
+
+async function fetchEnc() {
+  if (cached) return cached;
+  const res = await fetch(ENC_URL);
+  if (!res.ok) throw new Error('No se pudo bajar el archivo (' + res.status + ')');
+  const total = +res.headers.get('Content-Length') || 0;
+  const reader = res.body.getReader();
+  const chunks = [];
+  let got = 0;
+  barWrap.style.display = 'block';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    got += value.length;
+    if (total) {
+      bar.style.width = (got / total * 100).toFixed(1) + '%';
+      setStatus('Descargando… ' + (got / 1048576).toFixed(0) + ' / ' + (total / 1048576).toFixed(0) + ' MB');
+    } else {
+      setStatus('Descargando… ' + (got / 1048576).toFixed(0) + ' MB');
+    }
+  }
+  bar.style.width = '100%';
+  const buf = new Uint8Array(got);
+  let off = 0;
+  for (const c of chunks) { buf.set(c, off); off += c.length; }
+  cached = buf;
+  return buf;
+}
+
+async function decrypt(buf, pass) {
+  if (String.fromCharCode(buf[0], buf[1], buf[2], buf[3]) !== 'XCE1')
+    throw new Error('Archivo cifrado inválido');
+  const salt = buf.subarray(4, 20);
+  const iv = buf.subarray(20, 32);
+  const ct = buf.subarray(32);
+  const keyMat = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: ITERATIONS, hash: 'SHA-256' },
+    keyMat, { name: 'AES-GCM', length: 256 }, false, ['decrypt']
+  );
+  return crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
+}
+
+btn.addEventListener('click', async () => {
+  const pass = passEl.value;
+  if (!pass) { setStatus('Ingresá la contraseña', 'err'); return; }
+  btn.disabled = true;
+  try {
+    const buf = await fetchEnc();
+    setStatus('Descifrando…');
+    await new Promise(r => setTimeout(r, 50)); // deja pintar el estado
+    let plain;
+    try {
+      plain = await decrypt(buf, pass);
+    } catch (e) {
+      setStatus('Contraseña incorrecta', 'err');
+      return;
+    }
+    const url = URL.createObjectURL(new Blob([plain], { type: 'application/vnd.android.package-archive' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'xcplayer.apk';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    setStatus('✓ Listo — instalá xcplayer.apk', 'ok');
+  } catch (e) {
+    setStatus(e.message || 'Error', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+});
+passEl.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
+</script>
+</body>
+</html>

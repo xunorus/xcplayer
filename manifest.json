@@ -1,0 +1,12 @@
+{
+  "name": "XC Player",
+  "short_name": "XC Player",
+  "description": "Cross country player — tu música local para volar",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0b1424",
+  "theme_color": "#0b1424",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
