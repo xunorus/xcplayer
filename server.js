@@ -69,13 +69,20 @@ function handleDownload(req, res) {
       '--extract-audio', '--audio-format', 'mp3',
       '-o', path.join(MUSIC, '%(title)s.%(ext)s'),
       '-c', '--newline', '--no-colors',
+      // imprime la ruta del mp3 apenas termina cada ítem → evento 'file' por track
+      '--print', 'after_move:filepath', '--no-quiet', '--no-simulate',
       url,
     ]);
 
     const onLine = chunk => {
       for (const line of chunk.toString().split('\n')) {
         const l = line.trim();
-        if (l) send({ type: 'log', line: l });
+        if (!l) continue;
+        if (l.startsWith(MUSIC + path.sep) && l.toLowerCase().endsWith('.mp3')) {
+          send({ type: 'file', name: path.basename(l) });
+        } else {
+          send({ type: 'log', line: l });
+        }
       }
     };
     proc.stdout.on('data', onLine);

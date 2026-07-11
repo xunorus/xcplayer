@@ -1,7 +1,7 @@
 /* XC Player — vanilla JS. Tracks en IndexedDB (blobs mp3), orden en localStorage. */
 'use strict';
 
-const APP_VERSION = '1.4';
+const APP_VERSION = '1.5';
 
 // Cliente de YouTube que no exige PO token (evita "403 Forbidden" al bajar el audio).
 // Si YouTube lo rompe: probar otro (android_vr, tv, ios) y "Actualizar yt-dlp" en Ajustes.
@@ -121,21 +121,45 @@ async function addUrlLocal(url) {
   btn.disabled = true; btn.textContent = '…';
   logEl.textContent = ''; logEl.hidden = false;
   log('🪂 descargando en el teléfono…');
-  const sub = await YT.addListener('progress', ev => { if (ev.line) log(ev.line); });
-  try {
-    const res = await YT.download({ url, args: YTDLP_ARGS });
-    for (const f of res.files) {
-      if (tracks.has(f.name)) {
-        log(`• ya está: ${f.name}`);
-      } else {
-        log(`⬇ guardando local: ${f.name}`);
-        const blob = await (await fetch(Cap.convertFileSrc(f.path))).blob();
-        await saveTrackBlob(f.name, blob);
-      }
-      await YT.removeFile({ path: f.path }); // no duplicar espacio
+
+  // yt-dlp imprime la ruta del mp3 apenas termina cada ítem (after_move) →
+  // lo guardamos y agregamos a la playlist sin esperar al resto de la playlist.
+  const grabbed = new Set();
+  const pending = [];
+  async function grabFile(p) {
+    const name = p.split('/').pop();
+    if (grabbed.has(name)) return;
+    grabbed.add(name);
+    if (tracks.has(name)) { log(`• ya está: ${name}`); }
+    else {
+      log(`⬇ guardando local: ${name}`);
+      const blob = await (await fetch(Cap.convertFileSrc(p))).blob();
+      await saveTrackBlob(name, blob);
     }
-    if (!res.files.length) log('⚠ no se generaron mp3 nuevos');
-    else log(`✔ listo: ${res.files.length} track(s) agregados`);
+    await YT.removeFile({ path: p }); // no duplicar espacio
+  }
+  const sub = await YT.addListener('progress', ev => {
+    const l = (ev.line || '').trim();
+    if (!l) return;
+    if (l.startsWith('/') && l.toLowerCase().endsWith('.mp3')) {
+      pending.push(grabFile(l).catch(e => log(`✗ ${e.message || e}`)));
+    } else {
+      log(l);
+    }
+  });
+  try {
+    const res = await YT.download({
+      url,
+      args: [...YTDLP_ARGS, '--print', 'after_move:filepath', '--no-quiet', '--no-simulate'],
+    });
+    await Promise.all(pending);
+    // red de seguridad: lo que no haya llegado como línea impresa
+    for (const f of res.files) {
+      if (grabbed.has(f.name)) continue;
+      await grabFile(f.path).catch(e => log(`✗ ${e.message || e}`));
+    }
+    if (!res.files.length && !grabbed.size) log('⚠ no se generaron mp3 nuevos');
+    else log(`✔ listo: ${grabbed.size} track(s)`);
     $('#urlInput').value = '';
   } catch (e) {
     log(`✗ ${e.message || e}`);
@@ -173,13 +197,15 @@ async function addUrl(url) {
         if (!l.trim()) continue;
         let msg; try { msg = JSON.parse(l); } catch { continue; }
         if (msg.type === 'log') log(msg.line);
+        if (msg.type === 'file') await saveTrackFromServer(msg.name); // agrega apenas termina cada track
         if (msg.type === 'done') done = msg;
       }
     }
     if (!done) throw new Error('el server cortó la conexión');
     if (done.error) throw new Error(done.error);
     if (!done.files.length) { log('⚠ no se generaron mp3 nuevos (¿ya estaban descargados? probá "Importar" en ajustes)'); }
-    for (const f of done.files) await saveTrackFromServer(f.name);
+    // red de seguridad: lo que no haya llegado como evento 'file' (server viejo, línea perdida)
+    for (const f of done.files) if (!tracks.has(f.name)) await saveTrackFromServer(f.name);
     log(`✔ listo: ${done.files.length} track(s) agregados`);
     $('#urlInput').value = '';
   } catch (e) {
