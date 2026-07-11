@@ -1,11 +1,13 @@
 /* XC Player — vanilla JS. Tracks en IndexedDB (blobs mp3), orden en localStorage. */
 'use strict';
 
-const APP_VERSION = '1.5';
+const APP_VERSION = '1.6';
 
 // Cliente de YouTube que no exige PO token (evita "403 Forbidden" al bajar el audio).
 // Si YouTube lo rompe: probar otro (android_vr, tv, ios) y "Actualizar yt-dlp" en Ajustes.
 const YTDLP_ARGS = ['--extractor-args', 'youtube:player_client=android_sdkless'];
+// Ante un 403 la app se auto-recupera: actualiza yt-dlp, reintenta, y prueba estos clientes.
+const FALLBACK_CLIENTS = ['android_vr', 'tv', 'ios'];
 
 const $ = s => document.querySelector(s);
 const Cap = window.Capacitor;
@@ -148,14 +150,37 @@ async function addUrlLocal(url) {
     }
   });
   try {
-    const res = await YT.download({
+    const tryDl = args => YT.download({
       url,
-      args: [...YTDLP_ARGS, '--print', 'after_move:filepath', '--no-quiet', '--no-simulate'],
+      args: [...args, '--print', 'after_move:filepath', '--no-quiet', '--no-simulate'],
     });
+    let res;
+    try {
+      res = await tryDl(YTDLP_ARGS);
+    } catch (e) {
+      // YouTube quema clientes/binarios viejos cada tanto → auto-recuperación
+      if (!/403|forbidden/i.test(String(e.message || e))) throw e;
+      log('⚠ YouTube bloqueó la descarga (403) — actualizando yt-dlp…');
+      try { const u = await YT.update(); log(`• yt-dlp ${u.version || '?'} (${u.status})`); }
+      catch (e2) { log('• no se pudo actualizar: ' + (e2.message || e2)); }
+      res = null;
+      try { res = await tryDl(YTDLP_ARGS); }
+      catch { log('⚠ sigue el 403 — probando clientes alternativos…'); }
+      for (const c of FALLBACK_CLIENTS) {
+        if (res) break;
+        log(`→ cliente ${c}…`);
+        try { res = await tryDl(['--extractor-args', `youtube:player_client=${c}`]); } catch {}
+      }
+      if (!res) throw new Error('YouTube bloqueó todos los clientes; reintentá en un rato');
+    }
     await Promise.all(pending);
     // red de seguridad: lo que no haya llegado como línea impresa
     for (const f of res.files) {
-      if (grabbed.has(f.name)) continue;
+      if (grabbed.has(f.name)) {
+        // re-descargado en un reintento y ya guardado antes: liberar espacio
+        await YT.removeFile({ path: f.path }).catch(() => {});
+        continue;
+      }
       await grabFile(f.path).catch(e => log(`✗ ${e.message || e}`));
     }
     if (!res.files.length && !grabbed.size) log('⚠ no se generaron mp3 nuevos');
@@ -394,6 +419,9 @@ $('#btnSettings').addEventListener('click', () => {
   $('#modeRow').hidden = !YT;
   $('#btnUpdateYt').hidden = !YT;
   $('#modeServer').checked = downloadMode() === 'server';
+  if (YT) YT.version()
+    .then(r => { $('#btnUpdateYt').textContent = `Actualizar yt-dlp (${r.version})`; })
+    .catch(() => {});
   dlg.showModal();
 });
 $('#modeServer').addEventListener('change', e => {
