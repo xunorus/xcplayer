@@ -1,7 +1,7 @@
 /* XC Player — vanilla JS. Tracks en IndexedDB (blobs mp3), orden en localStorage. */
 'use strict';
 
-const APP_VERSION = '1.7';
+const APP_VERSION = '1.8';
 
 // Cliente de YouTube que no exige PO token (evita "403 Forbidden" al bajar el audio).
 // Si YouTube lo rompe: probar otro (android_vr, tv, ios) y "Actualizar yt-dlp" en Ajustes.

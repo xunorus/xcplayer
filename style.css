@@ -38,8 +38,8 @@ header {
 /* ---------- stats ---------- */
 .stats { display: flex; gap: 10px; padding: 4px 16px 12px; }
 .chip {
-  flex: 1; background: var(--card); border-radius: var(--radius);
-  padding: 10px 6px; text-align: center;
+  flex: 1; min-width: 0; background: var(--card); border-radius: var(--radius);
+  padding: 10px 6px; text-align: center; overflow: hidden;
 }
 .chip span { font-size: 1.05rem; font-weight: 600; color: var(--accent); display: block; }
 .chip label { font-size: .68rem; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; }
@@ -48,13 +48,16 @@ header {
 .add { padding: 0 16px 12px; }
 .add-row { display: flex; gap: 8px; }
 #urlInput {
-  flex: 1; background: var(--card); border: 1px solid #24344f; color: var(--text);
+  /* min-width: 0 — sin esto el input no se encoge (ancho intrínseco ~20ch) y
+     en pantallas angostas o con fuente grande empuja el botón fuera de la pantalla */
+  flex: 1; min-width: 0; background: var(--card); border: 1px solid #24344f; color: var(--text);
   border-radius: var(--radius); padding: 12px 14px; font-size: .95rem; outline: none;
 }
 #urlInput:focus { border-color: var(--accent); }
 #btnAdd {
   background: var(--accent); color: #06263a; border: none; border-radius: var(--radius);
   padding: 0 18px; font-weight: 700; font-size: .95rem; cursor: pointer;
+  flex-shrink: 0; white-space: nowrap;
 }
 #btnAdd:disabled { opacity: .5; }
 #btnAdd.cancel { background: var(--danger); color: #2a0606; }
