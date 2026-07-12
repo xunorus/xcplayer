@@ -57,6 +57,7 @@ header {
   padding: 0 18px; font-weight: 700; font-size: .95rem; cursor: pointer;
 }
 #btnAdd:disabled { opacity: .5; }
+#btnAdd.cancel { background: var(--danger); color: #2a0606; }
 .log {
   margin-top: 10px; background: #0a1120; border-radius: 10px; padding: 10px;
   font-size: .7rem; line-height: 1.5; color: #7dd3fc; max-height: 130px;

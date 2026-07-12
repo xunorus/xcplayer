@@ -24,6 +24,7 @@ public class YtDlpPlugin extends Plugin {
 
     private final ExecutorService exec = Executors.newSingleThreadExecutor();
     private volatile boolean ready = false;
+    private volatile String currentProcId = null;
 
     private File musicDir() {
         File d = new File(getContext().getFilesDir(), "music");
@@ -86,7 +87,13 @@ public class YtDlpPlugin extends Plugin {
                     emitLine(line, progress);
                     return Unit.INSTANCE;
                 };
-                YoutubeDL.getInstance().execute(req, null, cb);
+                String procId = "dl-" + System.currentTimeMillis();
+                currentProcId = procId;
+                try {
+                    YoutubeDL.getInstance().execute(req, procId, cb);
+                } finally {
+                    currentProcId = null;
+                }
 
                 JSArray files = new JSArray();
                 File[] after = dir.listFiles();
@@ -106,6 +113,19 @@ public class YtDlpPlugin extends Plugin {
                 call.reject(e.getMessage() != null ? e.getMessage() : e.toString());
             }
         });
+    }
+
+    // Mata el yt-dlp en curso. Corre fuera de `exec` (que está ocupado con download()).
+    @PluginMethod
+    public void cancel(PluginCall call) {
+        String id = currentProcId;
+        boolean ok = false;
+        if (id != null) {
+            try { ok = YoutubeDL.getInstance().destroyProcessById(id); } catch (Exception ignored) {}
+        }
+        JSObject ret = new JSObject();
+        ret.put("cancelled", ok);
+        call.resolve(ret);
     }
 
     @PluginMethod

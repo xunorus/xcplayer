@@ -1,7 +1,7 @@
 /* XC Player — vanilla JS. Tracks en IndexedDB (blobs mp3), orden en localStorage. */
 'use strict';
 
-const APP_VERSION = '1.6';
+const APP_VERSION = '1.7';
 
 // Cliente de YouTube que no exige PO token (evita "403 Forbidden" al bajar el audio).
 // Si YouTube lo rompe: probar otro (android_vr, tv, ios) y "Actualizar yt-dlp" en Ajustes.
@@ -89,6 +89,34 @@ function log(line) {
   logEl.hidden = false;
   logEl.textContent += line + '\n';
   logEl.scrollTop = logEl.scrollHeight;
+  log.last = Date.now();
+}
+
+// latido: si el log queda mudo (conversión de un video largo, espera de YouTube),
+// mostrar que sigue vivo en vez de parecer colgado
+function startHeartbeat() {
+  log.last = Date.now();
+  return setInterval(() => {
+    if (Date.now() - log.last > 20000) log('⏳ sigue trabajando… (video largo o conversión)');
+  }, 5000);
+}
+
+// mixes/radios de YouTube (list=RD…) son playlists infinitas autogeneradas:
+// casi nunca es lo que se quiso pegar → bajar solo el video
+function isMixUrl(url) {
+  try {
+    const u = new URL(url);
+    return /youtu/i.test(u.hostname) && !!u.searchParams.get('v') && /^RD/.test(u.searchParams.get('list') || '');
+  } catch { return false; }
+}
+
+let cancelDl = null; // función de cancelación de la descarga en curso (null = no hay)
+function setDownloading(cancelFn) {
+  const btn = $('#btnAdd');
+  cancelDl = cancelFn;
+  btn.textContent = cancelFn ? '✕' : 'Agregar';
+  btn.disabled = false;
+  btn.classList.toggle('cancel', !!cancelFn);
 }
 
 /* ---------------- agregar / importar ---------------- */
@@ -119,10 +147,16 @@ async function saveTrackBlob(name, blob) {
 }
 
 async function addUrlLocal(url) {
-  const btn = $('#btnAdd');
-  btn.disabled = true; btn.textContent = '…';
   logEl.textContent = ''; logEl.hidden = false;
   log('🪂 descargando en el teléfono…');
+  const mixArgs = [];
+  if (isMixUrl(url)) {
+    mixArgs.push('--no-playlist');
+    log('• link de mix/radio de YouTube: bajo solo este video (los mix son casi infinitos)');
+  }
+  let cancelled = false;
+  setDownloading(() => { cancelled = true; log('✖ cancelando…'); YT.cancel(); });
+  const beat = startHeartbeat();
 
   // yt-dlp imprime la ruta del mp3 apenas termina cada ítem (after_move) →
   // lo guardamos y agregamos a la playlist sin esperar al resto de la playlist.
@@ -152,26 +186,27 @@ async function addUrlLocal(url) {
   try {
     const tryDl = args => YT.download({
       url,
-      args: [...args, '--print', 'after_move:filepath', '--no-quiet', '--no-simulate'],
+      args: [...args, ...mixArgs, '--print', 'after_move:filepath', '--no-quiet', '--no-simulate'],
     });
     let res;
     try {
       res = await tryDl(YTDLP_ARGS);
     } catch (e) {
       // YouTube quema clientes/binarios viejos cada tanto → auto-recuperación
-      if (!/403|forbidden/i.test(String(e.message || e))) throw e;
+      if (cancelled || !/403|forbidden/i.test(String(e.message || e))) throw e;
       log('⚠ YouTube bloqueó la descarga (403) — actualizando yt-dlp…');
       try { const u = await YT.update(); log(`• yt-dlp ${u.version || '?'} (${u.status})`); }
       catch (e2) { log('• no se pudo actualizar: ' + (e2.message || e2)); }
       res = null;
+      if (cancelled) throw e;
       try { res = await tryDl(YTDLP_ARGS); }
       catch { log('⚠ sigue el 403 — probando clientes alternativos…'); }
       for (const c of FALLBACK_CLIENTS) {
-        if (res) break;
+        if (res || cancelled) break;
         log(`→ cliente ${c}…`);
         try { res = await tryDl(['--extractor-args', `youtube:player_client=${c}`]); } catch {}
       }
-      if (!res) throw new Error('YouTube bloqueó todos los clientes; reintentá en un rato');
+      if (!res) throw new Error(cancelled ? 'cancelado' : 'YouTube bloqueó todos los clientes; reintentá en un rato');
     }
     await Promise.all(pending);
     // red de seguridad: lo que no haya llegado como línea impresa
@@ -187,24 +222,33 @@ async function addUrlLocal(url) {
     else log(`✔ listo: ${grabbed.size} track(s)`);
     $('#urlInput').value = '';
   } catch (e) {
-    log(`✗ ${e.message || e}`);
+    await Promise.all(pending); // guardar lo que alcanzó a terminar antes del corte
+    if (cancelled) log(`✖ cancelado — ${grabbed.size} track(s) quedaron guardados`);
+    else log(`✗ ${e.message || e}`);
   } finally {
+    clearInterval(beat);
     sub.remove();
-    btn.disabled = false; btn.textContent = 'Agregar';
+    setDownloading(null);
   }
 }
 
 async function addUrl(url) {
   if (downloadMode() === 'local') return addUrlLocal(url);
-  const btn = $('#btnAdd');
-  btn.disabled = true; btn.textContent = '…';
   logEl.textContent = ''; logEl.hidden = false;
   log('🪂 descargando en la Mac…');
+  const noPlaylist = isMixUrl(url);
+  if (noPlaylist) log('• link de mix/radio de YouTube: bajo solo este video (los mix son casi infinitos)');
+  let cancelled = false;
+  const ctrl = new AbortController();
+  // cortar la conexión mata el yt-dlp en el server (req.on('close') → proc.kill())
+  setDownloading(() => { cancelled = true; log('✖ cancelando…'); ctrl.abort(); });
+  const beat = startHeartbeat();
   try {
     const r = await fetch(serverBase() + '/api/download', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url }),
+      body: JSON.stringify({ url, noPlaylist }),
+      signal: ctrl.signal,
     });
     if (!r.ok || !r.body) {
       const e = await r.json().catch(() => ({}));
@@ -234,9 +278,11 @@ async function addUrl(url) {
     log(`✔ listo: ${done.files.length} track(s) agregados`);
     $('#urlInput').value = '';
   } catch (e) {
-    log(`✗ ${e.message} — ¿está corriendo el server en la Mac? (${serverBase() || location.origin})`);
+    if (cancelled) log('✖ cancelado — lo ya guardado queda en la playlist');
+    else log(`✗ ${e.message} — ¿está corriendo el server en la Mac? (${serverBase() || location.origin})`);
   } finally {
-    btn.disabled = false; btn.textContent = 'Agregar';
+    clearInterval(beat);
+    setDownloading(null);
   }
 }
 
@@ -459,6 +505,7 @@ $('#btnImport').addEventListener('click', importFolder);
 
 /* ---------------- eventos UI ---------------- */
 $('#btnAdd').addEventListener('click', () => {
+  if (cancelDl) { const c = cancelDl; cancelDl = null; $('#btnAdd').disabled = true; c(); return; }
   const url = $('#urlInput').value.trim();
   if (!/^https?:\/\//i.test(url)) { log('✗ pegá un link válido (http/https)'); return; }
   addUrl(url);

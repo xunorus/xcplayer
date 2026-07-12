@@ -50,8 +50,8 @@ function handleDownload(req, res) {
   let body = '';
   req.on('data', c => { body += c; });
   req.on('end', () => {
-    let url;
-    try { url = JSON.parse(body).url; } catch { return json(res, 400, { error: 'JSON inválido' }); }
+    let url, noPlaylist;
+    try { ({ url, noPlaylist } = JSON.parse(body)); } catch { return json(res, 400, { error: 'JSON inválido' }); }
     if (!url || !/^https?:\/\//i.test(url)) return json(res, 400, { error: 'URL inválida' });
     if (downloading) return json(res, 409, { error: 'Ya hay una descarga en curso' });
     downloading = true;
@@ -71,6 +71,7 @@ function handleDownload(req, res) {
       '-c', '--newline', '--no-colors',
       // imprime la ruta del mp3 apenas termina cada ítem → evento 'file' por track
       '--print', 'after_move:filepath', '--no-quiet', '--no-simulate',
+      ...(noPlaylist ? ['--no-playlist'] : []),
       url,
     ]);
 
