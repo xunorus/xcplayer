@@ -77,7 +77,7 @@ a { color: var(--accent); text-decoration: none; }
   </div>
   <p class="meta">
     Reproductor de música offline con descarga por link (yt-dlp embebido).<br>
-    <b>v1.8</b> · Android (arm64) · ~55 MB
+    <b id="verInfo">v1.8</b> · Android (arm64) · <span id="sizeInfo">~55 MB</span>
   </p>
   <label for="pass">Contraseña</label>
   <input type="password" id="pass" autocomplete="off" placeholder="••••••••">
@@ -95,6 +95,12 @@ a { color: var(--accent); text-decoration: none; }
 </div>
 <script>
 const ENC_URL = 'xcplayer.apk.enc';
+
+// versión y tamaño reales desde version.json (lo genera tools/encrypt-apk.js)
+fetch('version.json?t=' + Date.now()).then(r => r.json()).then(v => {
+  document.getElementById('verInfo').textContent = 'v' + v.version;
+  document.getElementById('sizeInfo').textContent = '~' + Math.round(v.sizeMB) + ' MB';
+}).catch(() => {});
 const ITERATIONS = 310000; // debe coincidir con tools/encrypt-apk.js
 
 const btn = document.getElementById('btn');

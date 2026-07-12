@@ -27,3 +27,17 @@ const ct = Buffer.concat([cipher.update(data), cipher.final(), cipher.getAuthTag
 
 fs.writeFileSync(outFile, Buffer.concat([Buffer.from('XCE1'), salt, iv, ct]));
 console.log('OK → ' + outFile + ' (' + (data.length / 1048576).toFixed(1) + ' MB cifrados)');
+
+// version.json junto al .enc: lo usan la página (para mostrar la versión) y la app
+// (auto-actualización desde Ajustes). Versión sacada de build.gradle.
+const gradle = fs.readFileSync(require('path').join(__dirname, '../android/app/build.gradle'), 'utf8');
+const versionName = (gradle.match(/versionName\s+"([^"]+)"/) || [])[1];
+const versionCode = +(gradle.match(/versionCode\s+(\d+)/) || [])[1];
+const vFile = require('path').join(require('path').dirname(outFile), 'version.json');
+fs.writeFileSync(vFile, JSON.stringify({
+  version: versionName,
+  versionCode: versionCode,
+  sizeMB: +(data.length / 1048576).toFixed(1),
+  date: new Date().toISOString().slice(0, 10),
+}) + '\n');
+console.log('OK → ' + vFile + ' (v' + versionName + ')');

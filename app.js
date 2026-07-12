@@ -1,7 +1,7 @@
 /* XC Player — vanilla JS. Tracks en IndexedDB (blobs mp3), orden en localStorage. */
 'use strict';
 
-const APP_VERSION = '1.8';
+const APP_VERSION = '1.9';
 
 // Cliente de YouTube que no exige PO token (evita "403 Forbidden" al bajar el audio).
 // Si YouTube lo rompe: probar otro (android_vr, tv, ios) y "Actualizar yt-dlp" en Ajustes.
@@ -13,7 +13,9 @@ const $ = s => document.querySelector(s);
 const Cap = window.Capacitor;
 const IS_NATIVE = !!(Cap && Cap.isNativePlatform && Cap.isNativePlatform());
 const YT = (IS_NATIVE && Cap.Plugins && Cap.Plugins.YtDlp) ? Cap.Plugins.YtDlp : null;
+const UPDATER = (IS_NATIVE && Cap.Plugins && Cap.Plugins.Updater) ? Cap.Plugins.Updater : null;
 const DEFAULT_SERVER = 'http://192.168.1.33:8977';
+const UPDATE_BASE = 'https://xunorus.github.io/xcplayer/'; // página de distribución (version.json + apk cifrado)
 
 // 'local' = yt-dlp embebido en el APK; 'server' = la Mac descarga
 const downloadMode = () => (YT && localStorage.getItem('xc-mode') !== 'server') ? 'local' : 'server';
@@ -457,6 +459,60 @@ function enableDrag(li, handle) {
   });
 }
 
+/* ---------------- auto-actualización de la app ---------------- */
+function cmpVer(a, b) {
+  const pa = String(a).split('.').map(Number), pb = String(b).split('.').map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d) return d;
+  }
+  return 0;
+}
+
+async function checkAppUpdate() {
+  if (!UPDATER) return;
+  try {
+    const r = await fetch(UPDATE_BASE + 'version.json?t=' + Date.now());
+    const info = await r.json();
+    if (cmpVer(info.version, APP_VERSION) > 0) {
+      const b = $('#btnAppUpdate');
+      b.hidden = false;
+      b.dataset.ver = info.version;
+      b.textContent = `⬆ Actualizar app a v${info.version}`;
+    }
+  } catch {} // sin red o sin página: no molestar
+}
+
+$('#btnAppUpdate').addEventListener('click', async () => {
+  const msg = $('#settingsMsg');
+  const perm = await UPDATER.canInstall();
+  if (!perm.ok) {
+    msg.textContent = 'Permití "instalar apps desconocidas" para XC Player y volvé a tocar el botón.';
+    await UPDATER.openInstallSettings();
+    return;
+  }
+  const pass = localStorage.getItem('xc-dl-pass')
+    || prompt('Contraseña de descarga (la de la página web):');
+  if (!pass) return;
+  const sub = await UPDATER.addListener('updateProgress', ev => {
+    msg.textContent = (ev.phase === 'download' ? '⬇ bajando' : '🔓 descifrando') +
+      (ev.pct >= 0 ? ` ${ev.pct}%` : '…');
+  });
+  $('#btnAppUpdate').disabled = true;
+  try {
+    await UPDATER.downloadAndInstall({ url: UPDATE_BASE + 'xcplayer.apk.enc', password: pass.trim() });
+    localStorage.setItem('xc-dl-pass', pass.trim());
+    msg.textContent = '✔ listo — confirmá la instalación de Android';
+  } catch (e) {
+    const m = String(e.message || e);
+    if (/contraseña/i.test(m)) localStorage.removeItem('xc-dl-pass');
+    msg.textContent = '✗ ' + m;
+  } finally {
+    sub.remove();
+    $('#btnAppUpdate').disabled = false;
+  }
+});
+
 /* ---------------- ajustes ---------------- */
 const dlg = $('#dlgSettings');
 $('#btnSettings').addEventListener('click', () => {
@@ -468,6 +524,7 @@ $('#btnSettings').addEventListener('click', () => {
   if (YT) YT.version()
     .then(r => { $('#btnUpdateYt').textContent = `Actualizar yt-dlp (${r.version})`; })
     .catch(() => {});
+  checkAppUpdate();
   dlg.showModal();
 });
 $('#modeServer').addEventListener('change', e => {
