@@ -14,14 +14,25 @@
 
 html, body { height: 100%; }
 
+/* Columna de altura fija: #scroll (header+stats+add+lista) escrollea adentro
+   y el player es un footer en flujo — nada puede quedar tapado por él.
+   (Antes el player era fixed + padding-bottom en el body: en el WebView del
+   S10+ el scroll del documento no respondía y los tracks quedaban ocultos.) */
 body {
   background: linear-gradient(180deg, #0e1a30 0%, var(--bg) 40%);
   color: var(--text);
   font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
-  /* espacio para el player fijo — valor inicial; app.js lo ajusta a la altura
-     real del player (con fuente grande del sistema puede medir bastante más) */
-  padding-bottom: 170px;
   -webkit-tap-highlight-color: transparent;
+  display: flex; flex-direction: column;
+  height: 100%;    /* fallback si el WebView no soporta dvh */
+  height: 100dvh;
+  overflow: hidden;
+}
+#scroll {
+  flex: 1; min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 16px;
 }
 
 /* ---------- header ---------- */
@@ -103,11 +114,10 @@ li.playing.paused .eq i { animation-play-state: paused; }
 
 /* ---------- player ---------- */
 .player {
-  position: fixed; left: 0; right: 0; bottom: 0;
+  flex: none;
   background: rgba(14, 24, 43, .97);
   border-top: 1px solid #22344f;
   padding: 10px 16px calc(12px + env(safe-area-inset-bottom));
-  backdrop-filter: blur(10px);
 }
 .np-title {
   text-align: center; font-size: .9rem; color: var(--text);

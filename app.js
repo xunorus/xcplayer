@@ -1,7 +1,7 @@
 /* XC Player — vanilla JS. Tracks en IndexedDB (blobs mp3), orden en localStorage. */
 'use strict';
 
-const APP_VERSION = '1.10';
+const APP_VERSION = '1.11';
 
 // Cliente de YouTube que no exige PO token (evita "403 Forbidden" al bajar el audio).
 // Si YouTube lo rompe: probar otro (android_vr, tv, ios) y "Actualizar yt-dlp" en Ajustes.
@@ -599,14 +599,6 @@ $('#btnRepeat').addEventListener('click', () => {
   localStorage.setItem('xc-repeat', repeat);
   updateNowPlaying();
 });
-
-/* el player es fixed y su altura real varía (fuente del sistema escala los rem,
-   safe-area-inset, etc.) — un padding-bottom fijo en el body deja los últimos
-   tracks tapados e inalcanzables. Se mide la altura real y se ajusta. */
-const playerEl = $('#player');
-new ResizeObserver(() => {
-  document.body.style.paddingBottom = (playerEl.offsetHeight + 12) + 'px';
-}).observe(playerEl);
 
 /* ---------------- init ---------------- */
 (async function init() {
