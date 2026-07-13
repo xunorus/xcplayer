@@ -63,22 +63,26 @@
     <input type="checkbox" id="modeServer">
     <span>Descargar con el server de la Mac (en vez de yt-dlp en el teléfono)</span>
   </label>
-  <label class="field">
-    Servidor (Mac con yt-dlp)
-    <input id="serverInput" type="url" placeholder="http://192.168.1.33:8977">
-  </label>
+  <div id="serverSection">
+    <label class="field">
+      Servidor (Mac con yt-dlp)
+      <input id="serverInput" type="url" placeholder="http://192.168.1.33:8977">
+    </label>
+    <div class="dlg-actions">
+      <button id="btnImport">Importar mp3 de la carpeta</button>
+      <button id="btnTest">Probar conexión</button>
+    </div>
+  </div>
   <div class="dlg-actions">
-    <button id="btnImport">Importar mp3 de la carpeta</button>
-    <button id="btnTest">Probar conexión</button>
     <button id="btnUpdateYt" hidden>Actualizar yt-dlp</button>
-    <button id="btnAppUpdate" class="primary" hidden></button>
+    <button id="btnAppUpdate" class="primary" hidden>🔄 Buscar actualización</button>
   </div>
   <p id="settingsMsg" class="msg"></p>
-  <p class="hint">Los tracks se guardan localmente en este dispositivo. Importar/probar conexión usan el server de la Mac; con yt-dlp en el teléfono no hace falta ningún server.</p>
+  <p class="hint">Los tracks se guardan localmente en este dispositivo; con yt-dlp en el teléfono no hace falta ningún server. El modo server usa la Mac para descargar e importar mp3.</p>
   <div class="dlg-actions">
     <button id="btnCloseSettings" class="primary">Cerrar</button>
   </div>
-  <p class="credits">XC Player 🪂 · un proyecto de <a href="https://energiasonora.eth.limo" target="_blank" rel="noopener">energiasonora.eth</a></p>
+  <p class="credits">XC Player 🪂 · un proyecto de <a href="https://energiasonora.xyz" target="_blank" rel="noopener">energiasonora.xyz</a></p>
 </dialog>
 
 <script src="app.js"></script>

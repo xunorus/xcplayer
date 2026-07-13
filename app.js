@@ -1,7 +1,7 @@
 /* XC Player — vanilla JS. Tracks en IndexedDB (blobs mp3), orden en localStorage. */
 'use strict';
 
-const APP_VERSION = '1.9';
+const APP_VERSION = '1.10';
 
 // Cliente de YouTube que no exige PO token (evita "403 Forbidden" al bajar el audio).
 // Si YouTube lo rompe: probar otro (android_vr, tv, ios) y "Actualizar yt-dlp" en Ajustes.
@@ -469,22 +469,33 @@ function cmpVer(a, b) {
   return 0;
 }
 
-async function checkAppUpdate() {
+async function checkAppUpdate(manual) {
   if (!UPDATER) return;
+  const b = $('#btnAppUpdate');
+  b.hidden = false;
+  if (manual) { b.disabled = true; b.textContent = '🔄 buscando…'; }
   try {
     const r = await fetch(UPDATE_BASE + 'version.json?t=' + Date.now());
     const info = await r.json();
     if (cmpVer(info.version, APP_VERSION) > 0) {
-      const b = $('#btnAppUpdate');
-      b.hidden = false;
       b.dataset.ver = info.version;
       b.textContent = `⬆ Actualizar app a v${info.version}`;
+    } else {
+      delete b.dataset.ver;
+      b.textContent = `✔ App al día (v${APP_VERSION})`;
     }
-  } catch {} // sin red o sin página: no molestar
+  } catch { // sin red o sin página
+    delete b.dataset.ver;
+    b.textContent = '🔄 Buscar actualización';
+    if (manual) $('#settingsMsg').textContent = '✗ no se pudo consultar la página de descargas (¿sin internet?)';
+  } finally {
+    b.disabled = false;
+  }
 }
 
 $('#btnAppUpdate').addEventListener('click', async () => {
   const msg = $('#settingsMsg');
+  if (!$('#btnAppUpdate').dataset.ver) { checkAppUpdate(true); return; }
   const perm = await UPDATER.canInstall();
   if (!perm.ok) {
     msg.textContent = 'Permití "instalar apps desconocidas" para XC Player y volvé a tocar el botón.';
@@ -515,12 +526,18 @@ $('#btnAppUpdate').addEventListener('click', async () => {
 
 /* ---------------- ajustes ---------------- */
 const dlg = $('#dlgSettings');
+/* con yt-dlp en el teléfono los controles de server (URL/probar/importar)
+   no aplican — solo se muestran si el modo server está activo (o en web) */
+function syncServerSection() {
+  $('#serverSection').hidden = !!YT && downloadMode() !== 'server';
+}
 $('#btnSettings').addEventListener('click', () => {
   $('#serverInput').value = localStorage.getItem('xc-server') || DEFAULT_SERVER;
   $('#settingsMsg').textContent = '';
   $('#modeRow').hidden = !YT;
   $('#btnUpdateYt').hidden = !YT;
   $('#modeServer').checked = downloadMode() === 'server';
+  syncServerSection();
   if (YT) YT.version()
     .then(r => { $('#btnUpdateYt').textContent = `Actualizar yt-dlp (${r.version})`; })
     .catch(() => {});
@@ -529,6 +546,7 @@ $('#btnSettings').addEventListener('click', () => {
 });
 $('#modeServer').addEventListener('change', e => {
   localStorage.setItem('xc-mode', e.target.checked ? 'server' : 'local');
+  syncServerSection();
 });
 $('#btnUpdateYt').addEventListener('click', async () => {
   const msg = $('#settingsMsg');
@@ -581,6 +599,14 @@ $('#btnRepeat').addEventListener('click', () => {
   localStorage.setItem('xc-repeat', repeat);
   updateNowPlaying();
 });
+
+/* el player es fixed y su altura real varía (fuente del sistema escala los rem,
+   safe-area-inset, etc.) — un padding-bottom fijo en el body deja los últimos
+   tracks tapados e inalcanzables. Se mide la altura real y se ajusta. */
+const playerEl = $('#player');
+new ResizeObserver(() => {
+  document.body.style.paddingBottom = (playerEl.offsetHeight + 12) + 'px';
+}).observe(playerEl);
 
 /* ---------------- init ---------------- */
 (async function init() {
