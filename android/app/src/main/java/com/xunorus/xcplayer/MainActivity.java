@@ -10,6 +10,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(YtDlpPlugin.class);
         registerPlugin(UpdaterPlugin.class);
+        registerPlugin(MediaSessionPlugin.class);
         super.onCreate(savedInstanceState);
         // también en release: app personal, permite inspeccionar por adb/CDP
         WebView.setWebContentsDebuggingEnabled(true);

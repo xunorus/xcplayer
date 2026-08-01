@@ -1,7 +1,7 @@
 /* XC Player — vanilla JS. Tracks en IndexedDB (blobs mp3), orden en localStorage. */
 'use strict';
 
-const APP_VERSION = '1.11';
+const APP_VERSION = '1.12';
 
 // Cliente de YouTube que no exige PO token (evita "403 Forbidden" al bajar el audio).
 // Si YouTube lo rompe: probar otro (android_vr, tv, ios) y "Actualizar yt-dlp" en Ajustes.
@@ -14,6 +14,7 @@ const Cap = window.Capacitor;
 const IS_NATIVE = !!(Cap && Cap.isNativePlatform && Cap.isNativePlatform());
 const YT = (IS_NATIVE && Cap.Plugins && Cap.Plugins.YtDlp) ? Cap.Plugins.YtDlp : null;
 const UPDATER = (IS_NATIVE && Cap.Plugins && Cap.Plugins.Updater) ? Cap.Plugins.Updater : null;
+const MEDIA = (IS_NATIVE && Cap.Plugins && Cap.Plugins.MediaSession) ? Cap.Plugins.MediaSession : null;
 const DEFAULT_SERVER = 'http://192.168.1.33:8977';
 const UPDATE_BASE = 'https://xunorus.github.io/xcplayer/'; // página de distribución (version.json + apk cifrado)
 
@@ -422,12 +423,57 @@ if ('mediaSession' in navigator) {
   navigator.mediaSession.setActionHandler('nexttrack', () => step(1));
 }
 
+/* ---------------- controles en el sistema (notificación / Bluetooth) ----------------
+   El WebView de Android NO publica navigator.mediaSession al sistema (eso solo lo hace
+   Chrome como navegador), así que el plugin nativo MediaSession espeja este <audio> en
+   una MediaSessionCompat real y devuelve los botones del sistema como eventos.        */
+let lastMediaPush = 0;
+function pushMedia(force) {
+  if (!MEDIA) return;
+  const t = tracks.get(currentId);
+  if (!t) return;
+  // el estado nativo extrapola la posición solo; con refrescarlo cada tanto alcanza
+  const now = Date.now();
+  if (!force && now - lastMediaPush < 5000) return;
+  lastMediaPush = now;
+  MEDIA.update({
+    title: t.title,
+    artist: 'XC Player',
+    duration: isFinite(audio.duration) ? audio.duration : (t.duration || 0),
+    position: audio.currentTime || 0,
+    playing: !audio.paused,
+  }).catch(() => {});
+}
+
+if (MEDIA) {
+  ['play', 'pause', 'loadedmetadata', 'seeked'].forEach(ev =>
+    audio.addEventListener(ev, () => pushMedia(true)));
+  audio.addEventListener('timeupdate', () => pushMedia(false));
+
+  MEDIA.addListener('mediaAction', ev => {
+    switch (ev.action) {
+      case 'play': audio.play().catch(() => {}); break;
+      case 'pause': audio.pause(); break;
+      case 'next': step(1); break;
+      case 'prev': step(-1); break;
+      case 'stop': audio.pause(); MEDIA.stop().catch(() => {}); break;
+      case 'seek': if (isFinite(audio.duration)) audio.currentTime = ev.position; break;
+    }
+    render();
+  });
+
+  MEDIA.requestPermission().catch(() => {});
+}
+
 /* ---------------- eliminar ---------------- */
 async function removeTrack(id) {
   const t = tracks.get(id);
   if (!t) return;
   if (!confirm(`¿Eliminar «${t.title}» de la app?\n(El archivo queda en la carpeta de la Mac)`)) return;
-  if (id === currentId) { audio.pause(); audio.src = ''; currentId = null; }
+  if (id === currentId) {
+    audio.pause(); audio.src = ''; currentId = null;
+    if (MEDIA) MEDIA.stop().catch(() => {});
+  }
   await idb.del(id);
   tracks.delete(id);
   order = order.filter(x => x !== id);
