@@ -79,7 +79,7 @@ a { color: var(--accent); text-decoration: none; }
     Reproductor de música offline con descarga por link (yt-dlp embebido).<br>
     <b id="verInfo">v1.8</b> · Android (arm64) · <span id="sizeInfo">~55 MB</span>
   </p>
-  <label for="pass">Contraseña</label>
+  <label for="pass" id="passLabel">Contraseña</label>
   <input type="password" id="pass" autocomplete="off" placeholder="••••••••">
   <button id="btn">Descargar APK</button>
   <div class="bar-wrap" id="barWrap"><div class="bar" id="bar"></div></div>
@@ -110,6 +110,15 @@ const bar = document.getElementById('bar');
 const barWrap = document.getElementById('barWrap');
 
 let cached = null; // el .enc descargado, para no re-bajar 56MB si la pass estaba mal
+
+// con un enlace de invitación la pass viene en el hash y el campo se esconde;
+// si resulta incorrecta hay que devolverlo para poder escribirla a mano
+function showPassField() {
+  document.getElementById('passLabel').style.display = '';
+  passEl.style.display = '';
+  passEl.value = '';
+  passEl.focus();
+}
 
 function setStatus(msg, cls) {
   statusEl.textContent = msg;
@@ -172,6 +181,7 @@ btn.addEventListener('click', async () => {
       plain = await decrypt(buf, pass);
     } catch (e) {
       setStatus('Contraseña incorrecta', 'err');
+      showPassField();
       return;
     }
     const url = URL.createObjectURL(new Blob([plain], { type: 'application/vnd.android.package-archive' }));
@@ -190,6 +200,24 @@ btn.addEventListener('click', async () => {
   }
 });
 passEl.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
+
+// enlace de invitación de un click: #p=<contraseña en base64url> (lo arma tools/invite.js)
+// el hash no viaja al server; igual lo sacamos de la barra apenas lo leemos
+(function () {
+  const m = location.hash.match(/[#&]p=([A-Za-z0-9\-_]+)/);
+  if (!m) return;
+  let pass;
+  try {
+    const b64 = m[1].replace(/-/g, '+').replace(/_/g, '/');
+    pass = new TextDecoder().decode(Uint8Array.from(atob(b64), c => c.charCodeAt(0)));
+  } catch (e) { return; }
+  if (!pass) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  passEl.value = pass;
+  passEl.style.display = 'none';
+  document.getElementById('passLabel').style.display = 'none';
+  btn.click();
+})();
 </script>
 </body>
 </html>
