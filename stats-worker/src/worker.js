@@ -9,7 +9,8 @@
 // De dónde se aceptan eventos. En pruebas locales se sobreescribe sin tocar el
 // código: `wrangler dev --var ALLOWED_ORIGIN:http://localhost:8099`.
 const DEFAULT_ORIGIN = 'https://xunorus.github.io';
-const EVENTS = new Set(['page_view', 'dl_start', 'dl_ok', 'dl_badpass', 'dl_err']);
+const EVENTS = new Set(['page_view', 'dl_start', 'dl_ok', 'dl_badpass', 'dl_err',
+                        'buy_view', 'buy_ok', 'buy_fail']);
 const SRCS = new Set(['invite', 'manual']);
 
 // Freno anti-spam: el endpoint es público y el repo también, así que cualquiera

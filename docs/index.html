@@ -101,17 +101,31 @@ section { padding: 54px 0; border-top: 1px solid var(--line); }
 
 /* ---------- descarga ---------- */
 #descargar { scroll-margin-top: 12px; }
+.dl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
 .dl {
   background: var(--card); border: 1px solid var(--line); border-radius: 18px;
-  padding: 24px; max-width: 460px;
+  padding: 24px;
 }
+.dl h3 { font-size: 1.05rem; margin: 0 0 4px; }
+.dl .sub { color: var(--dim); font-size: .84rem; margin: 0 0 18px; }
+.price { font-size: 2rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
+.price small { display: block; font-size: .8rem; font-weight: 400; color: var(--dim); letter-spacing: 0; margin-top: 4px; }
+details.pay-other { margin: 16px 0; border-top: 1px solid var(--line); padding-top: 14px; }
+details.pay-other summary { cursor: pointer; color: var(--accent); font-size: .86rem; }
+details.pay-other p { font-size: .86rem; color: var(--dim); margin: 12px 0 8px; }
+.addr {
+  display: block; background: #0d1a2e; border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .74rem; word-break: break-all; color: var(--text); margin-bottom: 10px;
+}
+.btn.small { padding: 8px 16px; font-size: .84rem; width: auto; }
 label { display: block; font-size: .82rem; color: var(--dim); margin-bottom: 6px; }
-input[type=password] {
+input[type=password], input[type=text] {
   width: 100%; padding: 13px 14px; font-size: 1rem; font-family: inherit;
   background: #0d1a2e; border: 1px solid var(--line); border-radius: 10px;
   color: var(--text); outline: none;
 }
-input[type=password]:focus { border-color: var(--accent); }
+input[type=password]:focus, input[type=text]:focus { border-color: var(--accent); }
 .dl .btn { width: 100%; margin-top: 14px; }
 .dl .btn:disabled { opacity: .55; cursor: default; }
 .bar-wrap { display: none; height: 6px; background: #0d1a2e; border-radius: 999px; overflow: hidden; margin-top: 14px; }
@@ -130,6 +144,7 @@ footer p { margin: 0 0 8px; }
 @media (max-width: 760px) {
   .hero-grid { grid-template-columns: 1fr; gap: 30px; }
   .hero-phone { order: -1; }
+  .dl-grid { grid-template-columns: 1fr; }
   .phone { max-width: 235px; }
   .tagline { font-size: 1.7rem; }
   section { padding: 42px 0; }
@@ -285,7 +300,31 @@ footer p { margin: 0 0 8px; }
   <div class="wrap">
     <h2>Descargar</h2>
     <p class="lead">El archivo está cifrado: se descifra acá mismo, en tu navegador.</p>
+    <div class="dl-grid">
+
+    <div class="dl" id="buyPanel" hidden>
+      <h3>Comprarla</h3>
+      <p class="sub">Pago único, sin cuenta y sin intermediarios.</p>
+      <div class="price"><span id="priceUsd">1 USD</span><small id="priceAlt">en cripto</small></div>
+      <a class="btn" id="btnCW" href="#" target="_blank" rel="noopener" hidden>Pagar con ChatWallet</a>
+      <details class="pay-other">
+        <summary>Pagar con otra wallet</summary>
+        <p>Mandá <b id="amtUsdc">1 USDC</b> en la red <b>Base</b> a esta dirección:</p>
+        <code class="addr" id="sellerAddr">…</code>
+        <button class="btn ghost small" id="btnCopy">Copiar dirección</button>
+        <p id="ethNote" hidden>También sirve ETH en Base por el equivalente: <b id="amtEth"></b>.</p>
+      </details>
+      <label for="txHash">Hash de la transacción</label>
+      <input type="text" id="txHash" placeholder="0x…" autocomplete="off" spellcheck="false">
+      <button id="btnVerify" class="btn">Verificar pago</button>
+      <div class="status" id="buyStatus"></div>
+      <a class="btn" id="btnBuyDl" hidden>⬇ Descargar XC Player</a>
+      <p class="fine" id="buyFine" hidden></p>
+    </div>
+
     <div class="dl">
+      <h3>Ya la tenés</h3>
+      <p class="sub">Con la contraseña que te pasaron, o con tu enlace de invitación.</p>
       <label for="pass" id="passLabel">Contraseña</label>
       <input type="password" id="pass" autocomplete="off" placeholder="••••••••">
       <button id="btn" class="btn">Descargar APK</button>
@@ -299,6 +338,8 @@ footer p { margin: 0 0 8px; }
         Firmado por energiaSonora — SHA-256 del certificado:<br>
         <code>303689b31c4083edb6ee9146665d4fc5c9c2e6812139cd352abbb0c827c82db1</code>
       </div>
+    </div>
+
     </div>
   </div>
 </section>
@@ -446,6 +487,114 @@ btn.addEventListener('click', async () => {
   }
 });
 passEl.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
+
+/* ---------------- comprar con cripto ---------------- */
+// El Worker xcplayer-shop verifica el pago contra Base y devuelve un enlace de
+// descarga de un solo uso. Si la tienda no está configurada, /price responde 503
+// y este panel no aparece: la descarga con contraseña sigue igual que siempre.
+const SHOP_URL = 'https://xcplayer-shop.chatwallet.workers.dev';
+
+const buyPanel = document.getElementById('buyPanel');
+const buyStatus = document.getElementById('buyStatus');
+const btnBuyDl = document.getElementById('btnBuyDl');
+const buyFine = document.getElementById('buyFine');
+const txEl = document.getElementById('txHash');
+const btnVerify = document.getElementById('btnVerify');
+
+function setBuyStatus(msg, cls) {
+  buyStatus.textContent = msg;
+  buyStatus.className = 'status' + (cls ? ' ' + cls : '');
+}
+
+function showLicense(lic) {
+  btnBuyDl.href = lic.dl;
+  btnBuyDl.hidden = false;
+  buyFine.hidden = false;
+  buyFine.textContent = lic.uses > 0
+    ? 'Enlace válido hasta el ' + new Date(lic.expires).toLocaleDateString('es-AR') +
+      ' · descargas que te quedan: ' + lic.uses
+    : 'Ya usaste todas las descargas de esta compra. Escribime y te renuevo el enlace.';
+  try { localStorage.setItem('xc-licencia', JSON.stringify(lic)); } catch (e) {}
+}
+
+// si ya compraste desde este navegador, el enlace vuelve a aparecer solo
+try {
+  const saved = JSON.parse(localStorage.getItem('xc-licencia') || 'null');
+  if (saved && saved.dl && saved.expires > Date.now()) showLicense(saved);
+} catch (e) {}
+
+fetch(SHOP_URL + '/price').then(r => r.ok ? r.json() : null).then(p => {
+  if (!p || !p.seller) return;
+  buyPanel.hidden = false;
+  track('buy_view');
+  document.getElementById('priceUsd').textContent = p.price_usd + ' USD';
+  document.getElementById('sellerAddr').textContent = p.seller;
+  const usdc = Number(p.usdc.units) / Math.pow(10, p.usdc.decimals);
+  document.getElementById('amtUsdc').textContent = usdc + ' USDC';
+  const alt = [usdc + ' USDC en Base'];
+  if (p.eth) {
+    const eth = Number(p.eth.wei) / 1e18;
+    alt.unshift('≈ ' + eth.toFixed(5) + ' ETH');
+    document.getElementById('amtEth').textContent = eth.toFixed(6) + ' ETH';
+    document.getElementById('ethNote').hidden = false;
+    const cw = document.getElementById('btnCW');
+    cw.href = p.chatwallet;   // abre ChatWallet con destino, red y monto ya cargados
+    cw.hidden = false;
+  }
+  document.getElementById('priceAlt').textContent = alt.join(' · ');
+}).catch(() => {});
+
+document.getElementById('btnCopy').addEventListener('click', async e => {
+  const addr = document.getElementById('sellerAddr').textContent;
+  try {
+    await navigator.clipboard.writeText(addr);
+    e.target.textContent = '✓ Copiada';
+    setTimeout(() => { e.target.textContent = 'Copiar dirección'; }, 2000);
+  } catch (_) {
+    setBuyStatus('No pude copiarla: seleccionala y copiala a mano', 'err');
+  }
+});
+
+let retries = 0;
+async function verifyPayment() {
+  const tx = txEl.value.trim();
+  if (!/^0x[0-9a-fA-F]{64}$/.test(tx)) {
+    setBuyStatus('Pegá el hash de la transacción (arranca con 0x)', 'err');
+    return;
+  }
+  btnVerify.disabled = true;
+  setBuyStatus('Buscando el pago en la cadena…');
+  try {
+    const r = await fetch(SHOP_URL + '/claim', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tx }),
+    });
+    const out = await r.json();
+    if (r.ok && out.ok) {
+      setBuyStatus(out.again ? '✓ Esta compra ya estaba registrada' : '✓ Pago verificado, gracias', 'ok');
+      showLicense(out);
+      track('buy_ok');
+      return;
+    }
+    // recién minada: reintenta solo un par de veces antes de molestar al comprador
+    if (out.retry && retries < 3) {
+      retries++;
+      setBuyStatus(out.error + ' Reintento en 6 segundos…');
+      setTimeout(verifyPayment, 6000);
+      return;
+    }
+    setBuyStatus('✗ ' + (out.error || 'No pude verificar el pago'), 'err');
+    track('buy_fail');
+  } catch (e) {
+    setBuyStatus('✗ No pude hablar con la tienda. ¿Hay internet?', 'err');
+    track('buy_fail');
+  } finally {
+    btnVerify.disabled = false;
+  }
+}
+btnVerify.addEventListener('click', () => { retries = 0; verifyPayment(); });
+txEl.addEventListener('keydown', e => { if (e.key === 'Enter') { retries = 0; verifyPayment(); } });
 
 // enlace de invitación de un click: #p=<contraseña en base64url> (lo arma tools/invite.js)
 // el hash no viaja al server; igual lo sacamos de la barra apenas lo leemos

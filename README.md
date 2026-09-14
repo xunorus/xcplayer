@@ -34,6 +34,36 @@ sola. El hash no viaja al server y se borra de la barra apenas se usa, pero
 **quien tenga ese link puede bajar el APK sin saber la contraseña**: para
 revocarlo, cambiar la pass y re-cifrar.
 
+## Venta en cripto
+
+`shop-worker/` (Cloudflare Worker + D1 + R2) vende la app por 1 dólar sin
+intermediarios. Dos vías de pago, las dos en **Base**:
+
+- **USDC** (estable, sin cotización) a la dirección de cobro.
+- **ETH nativo** por el equivalente a 1 USD: es la única que
+  [ChatWallet](https://chatwallet.org) sabe prellenar — su formato
+  `?pay=1&to=…&chainId=…&value=…&reply=…` usa `formatEther` y exige una red
+  nativa — así que el botón "Pagar con ChatWallet" va por ahí, de un toque, y el
+  resultado del pago le vuelve al vendedor por XMTP.
+
+El comprador pega el hash de la transacción, el Worker la verifica contra la
+cadena (destino, monto, confirmaciones, y que ese hash no se haya usado antes) y
+entrega un enlace de descarga de un solo uso. El APK sin cifrar vive en R2 y nunca
+es público: sólo sale por `/dl` con un token válido. La distribución gratuita por
+contraseña e invitación sigue intacta, igual que el updater de la app.
+
+```bash
+cd shop-worker
+npx wrangler d1 execute xcplayer-shop --remote --file=schema.sql
+npx wrangler r2 object put xcplayer-apk/xcplayer.apk --file=../xcplayer.apk --remote
+# poner la dirección de cobro en wrangler.toml (mientras diga PENDIENTE, la
+# tienda responde 503 y la landing no muestra el panel de compra)
+npx wrangler deploy
+```
+
+Al publicar una versión nueva hay que subir el APK a R2 además de re-cifrar el
+`.enc` de Pages: son dos copias del mismo archivo (se verifica con `shasum`).
+
 ## Métricas de descarga
 
 Pages no da estadísticas, así que la página manda eventos anónimos al Worker

@@ -1,0 +1,31 @@
+name = "xcplayer-shop"
+main = "src/worker.js"
+compatibility_date = "2026-09-01"
+preview_urls = false
+
+# Venta de XC Player: el comprador transfiere USDC en Base a SELLER_ADDRESS, pega
+# el hash de la transacción, el Worker la verifica contra la cadena y entrega un
+# enlace de descarga de un solo uso. El APK sin cifrar vive en R2 (nunca es público:
+# sólo sale por /dl con un token válido). La distribución gratuita por contraseña e
+# invitación sigue intacta en GitHub Pages, igual que el updater de la app.
+
+[vars]
+# ⚠️ Poner acá la dirección donde querés cobrar. Mientras diga PENDIENTE, la tienda
+# responde 503 y la landing esconde la sección de compra.
+SELLER_ADDRESS = "PENDIENTE"
+PRICE_USDC = "1"          # precio en USDC (se convierte a 6 decimales)
+MIN_CONFIRMATIONS = "2"   # bloques de Base (~2 segundos cada uno)
+DOWNLOAD_USES = "3"       # descargas por compra (por si se corta a mitad)
+DOWNLOAD_DAYS = "30"      # días de validez del enlace
+
+# Crear con: wrangler d1 create xcplayer-shop
+[[d1_databases]]
+binding = "DB"
+database_name = "xcplayer-shop"
+database_id = "eb913cac-a42a-4032-b4d4-e5d57e73b663"
+
+# Crear con: wrangler r2 bucket create xcplayer-apk
+# Subir con: wrangler r2 object put xcplayer-apk/xcplayer.apk --file=../xcplayer.apk --remote
+[[r2_buckets]]
+binding = "APK"
+bucket_name = "xcplayer-apk"

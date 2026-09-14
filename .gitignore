@@ -22,3 +22,4 @@ android/capacitor-cordova-android-plugins/
 
 # estado local de wrangler (base D1 de prueba, bundles)
 stats-worker/.wrangler/
+shop-worker/.wrangler/
