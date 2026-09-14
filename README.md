@@ -21,6 +21,34 @@ node tools/encrypt-apk.js "<password>"   # xcplayer.apk → docs/xcplayer.apk.en
 git add docs/xcplayer.apk.enc && git commit -m "apk vX.Y" && git push
 ```
 
+### Enlaces de invitación
+
+`node tools/invite.js` imprime un link con la contraseña en el hash
+(`…/#p=<base64url>`): la página la lee, esconde el campo y arranca la descarga
+sola. El hash no viaja al server y se borra de la barra apenas se usa, pero
+**quien tenga ese link puede bajar el APK sin saber la contraseña**: para
+revocarlo, cambiar la pass y re-cifrar.
+
+## Métricas de descarga
+
+Pages no da estadísticas, así que la página manda eventos anónimos al Worker
+`stats-worker/` (Cloudflare + D1). Dashboard: `/stats?k=<token>` del Worker, con
+el token en `.stats-token.txt` (fuera de git).
+
+Se guarda por evento: día (hora argentina), tipo (`page_view`, `dl_start`,
+`dl_ok`, `dl_badpass`, `dl_err`), versión, origen (`invite`/`manual`), plataforma
+gruesa, país (lo da Cloudflare) y un id al azar **por carga de página**, que no se
+persiste en el navegador y sólo sirve para saber si esa visita terminó la
+descarga. **No** se guarda IP, user-agent, referer ni ningún id de dispositivo, y
+la app (el APK) todavía no reporta nada.
+
+```bash
+cd stats-worker                                            # node 22+, wrangler lo exige
+npx wrangler d1 execute xcplayer-stats --remote --file=schema.sql
+npx wrangler secret put STATS_TOKEN
+npx wrangler deploy
+```
+
 ## Cómo funciona
 
 Dos modos de descarga (se elige en ⚙ Ajustes; el APK usa "teléfono" por defecto):

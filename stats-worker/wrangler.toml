@@ -1,0 +1,21 @@
+name = "xcplayer-stats"
+main = "src/worker.js"
+compatibility_date = "2026-09-01"
+
+# Una sola superficie pública: el dominio workers.dev. Sin URLs de preview.
+preview_urls = false
+
+# Conteo anónimo de descargas del APK de XC Player, que se sirve desde GitHub
+# Pages (https://xunorus.github.io/xcplayer/) y por lo tanto no deja ninguna
+# estadística. La página manda eventos a POST /e y el dashboard vive en
+# GET /stats?k=<token>.
+#
+# El token NO va acá (este repo es público): es un secret.
+#   npx wrangler secret put STATS_TOKEN
+
+# Crear con: wrangler d1 create xcplayer-stats
+# Esquema:   wrangler d1 execute xcplayer-stats --remote --file=schema.sql
+[[d1_databases]]
+binding = "DB"
+database_name = "xcplayer-stats"
+database_id = "cbb8ed94-1f1f-42a3-b51e-90a07550be01"

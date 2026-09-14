@@ -16,3 +16,9 @@ android/app/src/main/assets/public/
 android/app/src/main/assets/capacitor.config.json
 android/app/src/main/assets/capacitor.plugins.json
 android/capacitor-cordova-android-plugins/
+
+# token del dashboard de métricas (Worker xcplayer-stats)
+.stats-token.txt
+
+# estado local de wrangler (base D1 de prueba, bundles)
+stats-worker/.wrangler/

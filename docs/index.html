@@ -88,6 +88,7 @@ a { color: var(--accent); text-decoration: none; }
     El APK está cifrado (AES-256-GCM); se descifra acá mismo, en tu navegador.
     Sin la contraseña no hay descarga.<br>
     Al instalar, Android va a pedir permitir "orígenes desconocidos".<br>
+    Se cuentan las descargas de forma anónima: sin IP, sin cookies y sin nada que te identifique.<br>
     Código fuente: <a href="https://github.com/xunorus/xcplayer">github.com/xunorus/xcplayer</a><br><br>
     Firmado por energiaSonora — SHA-256 del certificado:<br>
     <code style="font-size:.68rem;word-break:break-all;color:var(--dim)">303689b31c4083edb6ee9146665d4fc5c9c2e6812139cd352abbb0c827c82db1</code>
@@ -95,12 +96,33 @@ a { color: var(--accent); text-decoration: none; }
 </div>
 <script>
 const ENC_URL = 'xcplayer.apk.enc';
+const STATS_URL = 'https://xcplayer-stats.chatwallet.workers.dev/e'; // Worker xcplayer-stats (ver stats-worker/)
+
+// Conteo anónimo de descargas. `sid` es un número al azar de ESTA carga de página:
+// no se guarda en ningún lado del navegador y sirve sólo para saber si la misma
+// visita terminó la descarga. Si el Worker está caído, no pasa absolutamente nada.
+const sid = Math.random().toString(36).slice(2, 12);
+const fromInvite = /[#&]p=/.test(location.hash);
+let appVer = null;
+let onVersion = () => {}; // el enlace de invitación arranca acá, con la versión ya sabida
+
+function track(ev, extra) {
+  try {
+    const body = JSON.stringify(Object.assign({ ev, sid, ver: appVer, src: fromInvite ? 'invite' : 'manual' }, extra));
+    // text/plain a propósito: es una petición "simple", así no hay preflight
+    // (sendBeacon manda con credenciales y el preflight exigiría más ceremonia).
+    const blob = new Blob([body], { type: 'text/plain;charset=UTF-8' });
+    if (!(navigator.sendBeacon && navigator.sendBeacon(STATS_URL, blob)))
+      fetch(STATS_URL, { method: 'POST', body, keepalive: true }).catch(() => {});
+  } catch (e) {}
+}
 
 // versión y tamaño reales desde version.json (lo genera tools/encrypt-apk.js)
 fetch('version.json?t=' + Date.now()).then(r => r.json()).then(v => {
+  appVer = v.version;
   document.getElementById('verInfo').textContent = 'v' + v.version;
   document.getElementById('sizeInfo').textContent = '~' + Math.round(v.sizeMB) + ' MB';
-}).catch(() => {});
+}).catch(() => {}).finally(() => { track('page_view'); onVersion(); });
 const ITERATIONS = 310000; // debe coincidir con tools/encrypt-apk.js
 
 const btn = document.getElementById('btn');
@@ -172,6 +194,8 @@ btn.addEventListener('click', async () => {
   const pass = passEl.value;
   if (!pass) { setStatus('Ingresá la contraseña', 'err'); return; }
   btn.disabled = true;
+  track('dl_start');
+  const t0 = Date.now();
   try {
     const buf = await fetchEnc();
     setStatus('Descifrando…');
@@ -181,6 +205,7 @@ btn.addEventListener('click', async () => {
       plain = await decrypt(buf, pass);
     } catch (e) {
       setStatus('Contraseña incorrecta', 'err');
+      track('dl_badpass');
       showPassField();
       return;
     }
@@ -193,8 +218,10 @@ btn.addEventListener('click', async () => {
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 60000);
     setStatus('✓ Listo — instalá xcplayer.apk', 'ok');
+    track('dl_ok', { ms: Date.now() - t0 });
   } catch (e) {
     setStatus(e.message || 'Error', 'err');
+    track('dl_err');
   } finally {
     btn.disabled = false;
   }
@@ -216,7 +243,7 @@ passEl.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); })
   passEl.value = pass;
   passEl.style.display = 'none';
   document.getElementById('passLabel').style.display = 'none';
-  btn.click();
+  onVersion = () => btn.click();
 })();
 </script>
 </body>
