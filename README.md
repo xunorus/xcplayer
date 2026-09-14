@@ -4,9 +4,14 @@ Cross country player — reproductor de música local con descarga por link (yt-
 
 ## Descargar el APK
 
-**https://xunorus.github.io/xcplayer/** — el APK está en este repo pero cifrado
+**https://xunorus.github.io/xcplayer/** — landing del proyecto (qué hace, capturas
+y cómo se instala) con la descarga al final. El APK está en este repo pero cifrado
 (AES-256-GCM); la página lo descifra en el navegador con la contraseña. El código
 es libre, el APK no.
+
+Las capturas de `docs/shots/` se sacan de la app real corriendo en el navegador
+(viewport de teléfono por CDP, con tracks de ejemplo sembrados en IndexedDB);
+la de Ajustes simula el entorno nativo para que se vea como en el APK.
 
 El APK está firmado con la clave de release **energiaSonora** (alias `xcplayer` en
 `~/xunserver/keys/energiasonora.keystore`; credenciales en `android/keystore.properties`,

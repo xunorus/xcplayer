@@ -1,99 +1,318 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>XC Player — Descargar APK</title>
-<link rel="icon" href="icon.svg">
+<meta name="theme-color" content="#0b1424">
+<title>XC Player — tu música, sin señal</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="description" content="Reproductor de música offline para Android: pegás un link, se baja al teléfono y queda guardada. Sin cuenta, sin publicidad y sin datos cuando ya la tenés.">
+<meta property="og:title" content="XC Player — tu música, sin señal">
+<meta property="og:description" content="Pegás un link, se baja al teléfono y queda guardada. Para volar, manejar o cualquier lugar sin señal.">
+<meta property="og:image" content="https://xunorus.github.io/xcplayer/icon.svg">
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
   --bg: #0b1424;
+  --bg2: #0e1a30;
   --card: #121f36;
   --card2: #182741;
+  --line: #24344f;
   --text: #e8f0fb;
   --dim: #8aa2c0;
   --accent: #4cc3ff;
   --accent2: #fb923c;
+  --ok: #3ddc97;
   --danger: #f87171;
-  --ok: #4ade80;
-  --radius: 14px;
 }
-html, body { height: 100%; }
+* { box-sizing: border-box; }
 body {
-  background: linear-gradient(180deg, #0e1a30 0%, var(--bg) 40%);
+  margin: 0;
+  background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
-  display: flex; align-items: center; justify-content: center;
-  padding: 20px;
+  font: 16px/1.6 -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
-.card {
-  background: var(--card); border-radius: var(--radius);
-  padding: 32px 28px; max-width: 420px; width: 100%;
-  box-shadow: 0 20px 60px rgba(0,0,0,.4);
+.wrap { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+h2 { font-size: 1.45rem; margin: 0 0 6px; letter-spacing: -.01em; }
+.lead { color: var(--dim); margin: 0 0 26px; }
+section { padding: 54px 0; border-top: 1px solid var(--line); }
+
+/* ---------- hero ---------- */
+.hero {
+  background: radial-gradient(1100px 520px at 50% -160px, #17325a 0%, var(--bg2) 55%, var(--bg) 100%);
+  border-top: 0;
+  padding: 56px 0 40px;
 }
-.head { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
-.head img { width: 52px; height: 52px; border-radius: 13px; }
-h1 { font-size: 1.4rem; letter-spacing: .5px; }
-.sub { font-size: .72rem; color: var(--dim); letter-spacing: 2px; text-transform: uppercase; }
-.meta { color: var(--dim); font-size: .85rem; margin: 14px 0 22px; line-height: 1.5; }
-.meta b { color: var(--text); font-weight: 600; }
-label { display: block; font-size: .78rem; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+.hero-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 42px; align-items: center; }
+.brand { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+.brand img { width: 62px; height: 62px; border-radius: 15px; }
+.brand h1 { font-size: 1.9rem; margin: 0; letter-spacing: -.02em; }
+.brand .sub { color: var(--dim); font-size: .8rem; letter-spacing: .12em; text-transform: uppercase; }
+.tagline { font-size: 2.1rem; line-height: 1.2; margin: 0 0 14px; letter-spacing: -.03em; }
+.tagline em { color: var(--accent); font-style: normal; }
+.pitch { color: var(--dim); font-size: 1.05rem; margin: 0 0 26px; max-width: 30em; }
+.cta-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.btn {
+  display: inline-block; border: 0; border-radius: 999px; cursor: pointer;
+  padding: 13px 26px; font-size: 1rem; font-weight: 700; font-family: inherit;
+  background: var(--accent); color: #06243a;
+}
+.btn:hover { background: #6fd0ff; text-decoration: none; }
+.btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+.btn.ghost:hover { border-color: var(--accent); background: #14233c; }
+.hero-meta { color: var(--dim); font-size: .82rem; margin-top: 16px; }
+.hero-meta b { color: var(--text); font-weight: 600; }
+
+/* ---------- teléfono ---------- */
+.phone {
+  width: 100%; max-width: 290px; margin: 0 auto;
+  border: 8px solid #1b2a44; border-radius: 34px; background: #000;
+  box-shadow: 0 24px 60px rgba(0,0,0,.55); overflow: hidden;
+}
+.phone img { display: block; width: 100%; height: auto; }
+
+/* ---------- features ---------- */
+.feats { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.feat { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+.feat .ico { width: 26px; height: 26px; color: var(--accent); display: block; }
+.feat h3 { font-size: 1rem; margin: 10px 0 6px; }
+.feat p { margin: 0; color: var(--dim); font-size: .9rem; }
+
+/* ---------- capturas ---------- */
+.shots { display: flex; gap: 18px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x mandatory; }
+.shot { flex: 0 0 232px; scroll-snap-align: center; }
+.shot .phone { max-width: 232px; border-width: 6px; border-radius: 26px; }
+.shot p { color: var(--dim); font-size: .82rem; text-align: center; margin: 10px 0 0; }
+
+/* ---------- pasos ---------- */
+.steps { counter-reset: paso; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.step { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 18px 18px 56px; position: relative; }
+.step::before {
+  counter-increment: paso; content: counter(paso);
+  position: absolute; left: 16px; top: 16px;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--accent); color: #06243a;
+  font-weight: 700; font-size: .9rem; display: grid; place-items: center;
+}
+.step h3 { font-size: 1rem; margin: 0 0 4px; }
+.step p { margin: 0; color: var(--dim); font-size: .9rem; }
+
+/* ---------- descarga ---------- */
+#descargar { scroll-margin-top: 12px; }
+.dl {
+  background: var(--card); border: 1px solid var(--line); border-radius: 18px;
+  padding: 24px; max-width: 460px;
+}
+label { display: block; font-size: .82rem; color: var(--dim); margin-bottom: 6px; }
 input[type=password] {
-  width: 100%; background: var(--card2); border: 1px solid #24344f; color: var(--text);
-  border-radius: var(--radius); padding: 13px 14px; font-size: 1rem; outline: none;
-  margin-bottom: 14px;
+  width: 100%; padding: 13px 14px; font-size: 1rem; font-family: inherit;
+  background: #0d1a2e; border: 1px solid var(--line); border-radius: 10px;
+  color: var(--text); outline: none;
 }
 input[type=password]:focus { border-color: var(--accent); }
-button {
-  width: 100%; background: var(--accent); color: #06263a; border: none;
-  border-radius: var(--radius); padding: 14px; font-weight: 700; font-size: 1rem;
-  cursor: pointer; transition: opacity .15s;
-}
-button:disabled { opacity: .45; cursor: default; }
-.bar-wrap {
-  margin-top: 16px; background: var(--card2); border-radius: 8px; height: 8px;
-  overflow: hidden; display: none;
-}
-.bar { height: 100%; width: 0%; background: var(--accent); border-radius: 8px; transition: width .2s; }
+.dl .btn { width: 100%; margin-top: 14px; }
+.dl .btn:disabled { opacity: .55; cursor: default; }
+.bar-wrap { display: none; height: 6px; background: #0d1a2e; border-radius: 999px; overflow: hidden; margin-top: 14px; }
+.bar { height: 100%; width: 0; background: var(--accent); transition: width .18s; }
 .status { margin-top: 12px; font-size: .88rem; color: var(--dim); min-height: 1.3em; }
 .status.err { color: var(--danger); }
 .status.ok { color: var(--ok); }
-.note {
-  margin-top: 22px; padding-top: 16px; border-top: 1px solid #24344f;
-  font-size: .78rem; color: var(--dim); line-height: 1.55;
+.fine { color: var(--dim); font-size: .78rem; line-height: 1.6; margin: 14px 0 0; }
+.fine code { font-size: .68rem; word-break: break-all; color: var(--dim); }
+.sig { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line); }
+
+/* ---------- pie ---------- */
+footer { padding: 34px 0 48px; border-top: 1px solid var(--line); color: var(--dim); font-size: .84rem; }
+footer p { margin: 0 0 8px; }
+
+@media (max-width: 760px) {
+  .hero-grid { grid-template-columns: 1fr; gap: 30px; }
+  .hero-phone { order: -1; }
+  .phone { max-width: 235px; }
+  .tagline { font-size: 1.7rem; }
+  section { padding: 42px 0; }
 }
-a { color: var(--accent); text-decoration: none; }
 </style>
 </head>
 <body>
-<div class="card">
-  <div class="head">
-    <img src="icon.svg" alt="XC Player">
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="i-link"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></g>
+    <g id="i-offline"><path d="M1 1l22 22"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><path d="M12 20h.01"/></g>
+    <g id="i-phone"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></g>
+    <g id="i-sliders"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></g>
+    <g id="i-shuffle"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></g>
+    <g id="i-update"><circle cx="12" cy="12" r="10"/><path d="M16 12l-4-4-4 4"/><path d="M12 16V8"/></g>
+  </defs>
+</svg>
+
+<header class="hero">
+  <div class="wrap hero-grid">
     <div>
-      <h1>XC Player</h1>
-      <div class="sub">Cross country player</div>
+      <div class="brand">
+        <img src="icon.svg" alt="">
+        <div>
+          <h1>XC Player</h1>
+          <div class="sub">cross country player</div>
+        </div>
+      </div>
+      <p class="tagline">Tu música, <em>sin señal</em> y sin vueltas.</p>
+      <p class="pitch">
+        Pegás un link, se baja al teléfono y queda guardada ahí. Después suena
+        aunque estés a 2.000 metros, en la ruta o donde no entra un dato.
+        Sin cuenta, sin publicidad y sin suscripción.
+      </p>
+      <div class="cta-row">
+        <a class="btn" href="#descargar">Descargar para Android</a>
+        <a class="btn ghost" href="https://github.com/xunorus/xcplayer">Ver el código</a>
+      </div>
+      <p class="hero-meta">
+        <b id="verInfo">—</b> · Android 7+ (arm64) · <b id="sizeInfo">~55 MB</b> ·
+        fuera de Play Store: se instala desde acá
+      </p>
+    </div>
+    <div class="hero-phone">
+      <div class="phone">
+        <img src="shots/shot-playlist.webp" width="600" height="1290"
+             alt="La playlist de XC Player en un teléfono, con el reproductor abajo">
+      </div>
     </div>
   </div>
-  <p class="meta">
-    Reproductor de música offline con descarga por link (yt-dlp embebido).<br>
-    <b id="verInfo">v1.8</b> · Android (arm64) · <span id="sizeInfo">~55 MB</span>
-  </p>
-  <label for="pass" id="passLabel">Contraseña</label>
-  <input type="password" id="pass" autocomplete="off" placeholder="••••••••">
-  <button id="btn">Descargar APK</button>
-  <div class="bar-wrap" id="barWrap"><div class="bar" id="bar"></div></div>
-  <div class="status" id="status"></div>
-  <p class="note">
-    El APK está cifrado (AES-256-GCM); se descifra acá mismo, en tu navegador.
-    Sin la contraseña no hay descarga.<br>
-    Al instalar, Android va a pedir permitir "orígenes desconocidos".<br>
-    Se cuentan las descargas de forma anónima: sin IP, sin cookies y sin nada que te identifique.<br>
-    Código fuente: <a href="https://github.com/xunorus/xcplayer">github.com/xunorus/xcplayer</a><br><br>
-    Firmado por energiaSonora — SHA-256 del certificado:<br>
-    <code style="font-size:.68rem;word-break:break-all;color:var(--dim)">303689b31c4083edb6ee9146665d4fc5c9c2e6812139cd352abbb0c827c82db1</code>
-  </p>
-</div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>Qué hace</h2>
+    <p class="lead">Poca cosa, pero bien.</p>
+    <div class="feats">
+      <div class="feat">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-link"/></svg>
+        <h3>Pegás un link</h3>
+        <p>De una canción o de una playlist entera. La baja, la convierte a mp3 y la agrega
+           sola, tema por tema, a medida que van terminando.</p>
+      </div>
+      <div class="feat">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-offline"/></svg>
+        <h3>Suena sin internet</h3>
+        <p>Cada tema queda guardado en el teléfono, no en la nube. Una vez que lo bajaste,
+           el avión en modo avión no cambia nada.</p>
+      </div>
+      <div class="feat">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-phone"/></svg>
+        <h3>No necesita una compu</h3>
+        <p>El descargador va adentro de la app. No hay que dejar prendida ninguna máquina
+           en casa ni pasar archivos por cable.</p>
+      </div>
+      <div class="feat">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-sliders"/></svg>
+        <h3>Controles donde los buscás</h3>
+        <p>Play, pausa y cambio de tema desde la pantalla de bloqueo, la barra de
+           notificaciones y los botones del manos libres o del casco.</p>
+      </div>
+      <div class="feat">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-shuffle"/></svg>
+        <h3>Tu orden</h3>
+        <p>Arrastrás los temas para ordenarlos, aleatorio y repetición. La lista queda
+           como la dejaste.</p>
+      </div>
+      <div class="feat">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-update"/></svg>
+        <h3>Se actualiza sola</h3>
+        <p>Cuando hay versión nueva, la app avisa en Ajustes y se actualiza desde ahí.
+           No hay que volver a esta página.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Así se ve</h2>
+    <p class="lead">Capturas de la app andando.</p>
+    <div class="shots">
+      <figure class="shot" style="margin:0">
+        <div class="phone">
+          <img src="shots/shot-playlist.webp" width="600" height="1290" loading="lazy"
+               alt="Lista de temas con duración y tamaño, y el reproductor abajo">
+        </div>
+        <p>La playlist y el reproductor</p>
+      </figure>
+      <figure class="shot" style="margin:0">
+        <div class="phone">
+          <img src="shots/shot-descarga.webp" width="600" height="1290" loading="lazy"
+               alt="Un link pegado y el registro de la descarga en curso">
+        </div>
+        <p>Bajando un tema, en vivo</p>
+      </figure>
+      <figure class="shot" style="margin:0">
+        <div class="phone">
+          <img src="shots/shot-ajustes.webp" width="600" height="1290" loading="lazy"
+               alt="Pantalla de ajustes con el botón de actualizar la app">
+        </div>
+        <p>Ajustes: todo en dos botones</p>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Cómo se instala</h2>
+    <p class="lead">Tres minutos, una sola vez.</p>
+    <div class="steps">
+      <div class="step">
+        <h3>Bajá el archivo</h3>
+        <p>Abajo, con la contraseña que te pasaron (o con el link de invitación, que ya la trae).</p>
+      </div>
+      <div class="step">
+        <h3>Abrilo y aceptá</h3>
+        <p>Android va a pedir permiso para instalar "apps de origen desconocido": es porque
+           no viene de Play Store. Se lo das una vez y listo.</p>
+      </div>
+      <div class="step">
+        <h3>Pegá tu primer link</h3>
+        <p>Abrís la app, pegás un link en la barra de arriba y tocás Agregar. En un rato
+           lo tenés sonando.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="descargar">
+  <div class="wrap">
+    <h2>Descargar</h2>
+    <p class="lead">El archivo está cifrado: se descifra acá mismo, en tu navegador.</p>
+    <div class="dl">
+      <label for="pass" id="passLabel">Contraseña</label>
+      <input type="password" id="pass" autocomplete="off" placeholder="••••••••">
+      <button id="btn" class="btn">Descargar APK</button>
+      <div class="bar-wrap" id="barWrap"><div class="bar" id="bar"></div></div>
+      <div class="status" id="status"></div>
+      <p class="fine">
+        Sin la contraseña no hay descarga. Si no la tenés, pedísela a quien te pasó la página.<br>
+        Se cuentan las descargas de forma anónima: sin IP, sin cookies y sin nada que te identifique.
+      </p>
+      <div class="fine sig">
+        Firmado por energiaSonora — SHA-256 del certificado:<br>
+        <code>303689b31c4083edb6ee9146665d4fc5c9c2e6812139cd352abbb0c827c82db1</code>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>
+      XC Player 🪂 — hecho para volar cross country y quedarse sin señal tranquilo.
+      El código es libre: <a href="https://github.com/xunorus/xcplayer">github.com/xunorus/xcplayer</a>.
+    </p>
+    <p>Un proyecto de <a href="https://energiasonora.xyz">energiasonora.xyz</a>.</p>
+  </div>
+</footer>
+
 <script>
 const ENC_URL = 'xcplayer.apk.enc';
 const STATS_URL = 'https://xcplayer-stats.chatwallet.workers.dev/e'; // Worker xcplayer-stats (ver stats-worker/)
@@ -243,7 +462,11 @@ passEl.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); })
   passEl.value = pass;
   passEl.style.display = 'none';
   document.getElementById('passLabel').style.display = 'none';
-  onVersion = () => btn.click();
+  onVersion = () => {
+    // que la descarga no arranque invisible en el pie de una página larga
+    document.getElementById('descargar').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    btn.click();
+  };
 })();
 </script>
 </body>
