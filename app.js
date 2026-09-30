@@ -1,7 +1,7 @@
 /* XC Player — vanilla JS. Tracks en IndexedDB (blobs mp3), orden en localStorage. */
 'use strict';
 
-const APP_VERSION = '1.12';
+const APP_VERSION = '1.13';
 
 // Cliente de YouTube que no exige PO token (evita "403 Forbidden" al bajar el audio).
 // Si YouTube lo rompe: probar otro (android_vr, tv, ios) y "Actualizar yt-dlp" en Ajustes.
@@ -54,7 +54,10 @@ const idb = {
 
 /* ---------------- estado ---------------- */
 const tracks = new Map();          // id -> {id,title,size,duration,blob}
-let order = [];                    // ids en orden de playlist
+let order = [];                    // ids de la biblioteca, en orden
+let playlists = [];                // [{id,name,ids:[trackId]}] — referencias: el blob no se duplica
+let activeList = null;             // null = biblioteca | id de playlist (lo que se está mirando)
+let playingFrom = null;            // de qué lista salió lo que suena (cambiar de vista no corta la cola)
 let currentId = null;
 let shuffle = localStorage.getItem('xc-shuffle') === '1';
 let repeat = localStorage.getItem('xc-repeat') || 'all';   // all | one | off
@@ -62,6 +65,17 @@ const audio = new Audio();
 let objectUrl = null;
 
 const saveOrder = () => localStorage.setItem('xc-order', JSON.stringify(order));
+const savePlaylists = () => localStorage.setItem('xc-playlists', JSON.stringify(playlists));
+const plById = id => playlists.find(p => p.id === id) || null;
+
+// ids de una lista (null = biblioteca), sin los tracks que ya no existen
+function listIds(id) {
+  if (id === null) return order;
+  const p = plById(id);
+  return p ? p.ids.filter(x => tracks.has(x)) : order;
+}
+const viewIds = () => listIds(activeList);    // lo que se ve
+const queue = () => listIds(playingFrom);     // lo que se escucha
 
 /* ---------------- utils ---------------- */
 function fmtTime(s) {
@@ -146,6 +160,9 @@ async function saveTrackBlob(name, blob) {
   tracks.set(name, track);
   order.push(name);
   saveOrder();
+  // bajando con una playlist abierta, lo nuevo entra también ahí (es lo que uno espera)
+  const p = plById(activeList);
+  if (p && !p.ids.includes(name)) { p.ids.push(name); savePlaylists(); }
   render();
 }
 
@@ -308,9 +325,10 @@ async function importFolder() {
 
 /* ---------------- render ---------------- */
 function render() {
+  const ids = viewIds();
   const ul = $('#playlist');
   ul.innerHTML = '';
-  for (const id of order) {
+  for (const id of ids) {
     const t = tracks.get(id);
     if (!t) continue;
     const li = document.createElement('li');
@@ -325,15 +343,28 @@ function render() {
         <div class="tr-title"></div>
         <div class="tr-meta">${fmtTime(t.duration)} · ${fmtBytes(t.size)}</div>
       </div>
-      <button class="tr-btn tr-del" title="Eliminar">✕</button>
+      <button class="tr-btn tr-add" title="Agregar a playlist">＋</button>
+      <button class="tr-btn tr-del" title="${activeList ? 'Quitar de la playlist' : 'Eliminar de la app'}">✕</button>
       <button class="tr-btn tr-handle" title="Arrastrar">≡</button>`;
     li.querySelector('.tr-title').textContent = t.title;
     li.querySelector('.tr-main').addEventListener('click', () => playId(id));
-    li.querySelector('.tr-del').addEventListener('click', e => { e.stopPropagation(); removeTrack(id); });
-    enableDrag(li, li.querySelector('.tr-handle'));
+    li.querySelector('.tr-add').addEventListener('click', e => { e.stopPropagation(); openAddDlg(id); });
+    li.querySelector('.tr-del').addEventListener('click', e => {
+      e.stopPropagation();
+      // en la biblioteca se borra el archivo; en una playlist sólo se lo saca de ahí
+      if (activeList) removeFromList(activeList, id); else removeTrack(id);
+    });
+    enableDrag(li, li.querySelector('.tr-handle'), ul, onTrackDrop);
     ul.appendChild(li);
   }
-  $('#empty').style.display = order.length ? 'none' : 'block';
+  const em = $('#empty');
+  em.style.display = ids.length ? 'none' : 'block';
+  em.innerHTML = activeList
+    ? 'Playlist vacía.<br>Sumale tracks desde la biblioteca con ＋'
+    : 'Sin música todavía.<br>Pegá un link arriba para despegar 🪂';
+  $('#listName').textContent = activeList ? (plById(activeList) || {}).name || 'Playlist' : 'Biblioteca';
+  $('#listCount').textContent = ids.length === 1 ? '1 track' : ids.length + ' tracks';
+  renderLists();
   updateStats();
   updateNowPlaying();
 }
@@ -358,10 +389,206 @@ function updateNowPlaying() {
   $('#btnRepeat').textContent = repeat === 'one' ? '🔂' : '🔁';
 }
 
+/* ---------------- playlists ----------------
+   Las playlists son sólo listas de ids en localStorage: el mp3 vive una sola vez
+   en IndexedDB y puede estar en varias listas sin ocupar más lugar. */
+function onTrackDrop(ids) {
+  if (activeList) {
+    const p = plById(activeList);
+    if (p) { p.ids = ids; savePlaylists(); }
+  } else {
+    order = ids;
+    saveOrder();
+  }
+  updateStats();
+}
+
+function renderLists() {
+  const lib = $('#libRow');
+  lib.innerHTML = '';
+  lib.appendChild(listRow(null, 'Biblioteca', order.length));
+  const ul = $('#lists');
+  ul.innerHTML = '';
+  for (const p of playlists) ul.appendChild(listRow(p.id, p.name, listIds(p.id).length));
+  $('#noLists').hidden = !!playlists.length;
+}
+
+function listRow(id, name, n) {
+  const li = document.createElement('li');
+  li.className = 'pl' + (activeList === id ? ' on' : '');
+  li.dataset.pl = id || '';
+  li.innerHTML = `
+    <span class="pl-ico">${id ? '🎵' : '🗂'}</span>
+    <div class="pl-main">
+      <div class="pl-name"></div>
+      <div class="pl-meta">${n === 1 ? '1 track' : n + ' tracks'}</div>
+    </div>` + (id ? `
+    <button class="pl-btn pl-ren" title="Renombrar">✎</button>
+    <button class="pl-btn pl-del" title="Borrar playlist">✕</button>
+    <button class="pl-btn pl-handle" title="Arrastrar">≡</button>` : '');
+  li.querySelector('.pl-name').textContent = name;
+  li.querySelector('.pl-main').addEventListener('click', () => selectList(id));
+  li.querySelector('.pl-ico').addEventListener('click', () => selectList(id));
+  if (id) {
+    li.querySelector('.pl-ren').addEventListener('click', e => { e.stopPropagation(); renameList(id); });
+    li.querySelector('.pl-del').addEventListener('click', e => { e.stopPropagation(); deleteList(id); });
+    enableDrag(li, li.querySelector('.pl-handle'), $('#lists'), ids => {
+      playlists = ids.map(plById).filter(Boolean);
+      savePlaylists();
+    });
+  }
+  return li;
+}
+
+function selectList(id) {
+  activeList = id;
+  localStorage.setItem('xc-list', id || '');
+  setSide(false);
+  render();
+  $('#scroll').scrollTop = 0;
+}
+
+function newList(seed) {
+  const name = (prompt('Nombre de la playlist:') || '').trim();
+  if (!name) return null;
+  const p = {
+    id: 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    name,
+    ids: seed ? [seed] : [],
+  };
+  playlists.push(p);
+  savePlaylists();
+  return p;
+}
+
+function renameList(id) {
+  const p = plById(id);
+  if (!p) return;
+  const name = (prompt('Nombre de la playlist:', p.name) || '').trim();
+  if (!name) return;
+  p.name = name;
+  savePlaylists();
+  render();
+}
+
+function deleteList(id) {
+  const p = plById(id);
+  if (!p) return;
+  if (!confirm(`¿Borrar la playlist «${p.name}»?\n(Los tracks quedan en la biblioteca)`)) return;
+  playlists = playlists.filter(x => x !== p);
+  savePlaylists();
+  if (activeList === id) { activeList = null; localStorage.setItem('xc-list', ''); }
+  if (playingFrom === id) playingFrom = null;   // la cola vuelve a la biblioteca sin cortar lo que suena
+  render();
+}
+
+function removeFromList(listId, trackId) {
+  const p = plById(listId);
+  if (!p) return;
+  p.ids = p.ids.filter(x => x !== trackId);
+  savePlaylists();
+  render();
+}
+
+/* diálogo "agregar a playlist": cada fila suma o quita */
+let addTrackId = null;
+function openAddDlg(id) {
+  addTrackId = id;
+  const t = tracks.get(id);
+  $('#dlgAddTrack').textContent = t ? t.title : '';
+  renderAddDlg();
+  $('#dlgAdd').showModal();
+}
+
+function renderAddDlg() {
+  const ul = $('#pickList');
+  ul.innerHTML = '';
+  for (const p of playlists) {
+    const inIt = p.ids.includes(addTrackId);
+    const li = document.createElement('li');
+    li.innerHTML = `<button class="pick-row${inIt ? ' on' : ''}">
+      <span class="pick-ck">${inIt ? '✓' : '＋'}</span>
+      <span class="pick-name"></span>
+      <span class="pick-n">${p.ids.length}</span></button>`;
+    li.querySelector('.pick-name').textContent = p.name;
+    li.querySelector('.pick-row').addEventListener('click', () => {
+      if (inIt) p.ids = p.ids.filter(x => x !== addTrackId);
+      else p.ids.push(addTrackId);
+      savePlaylists();
+      renderAddDlg();
+      render();
+    });
+    ul.appendChild(li);
+  }
+  $('#pickEmpty').hidden = !!playlists.length;
+}
+
+/* ---------------- barra lateral (botón o swipe) ---------------- */
+const sideEl = $('#side'), scrimEl = $('#scrim');
+const sideOpen = () => document.body.classList.contains('side-open');
+function setSide(open) {
+  sideEl.classList.remove('dragging');
+  scrimEl.classList.remove('dragging');
+  sideEl.style.transform = '';   // fuera el inline del gesto: manda el CSS otra vez
+  scrimEl.style.opacity = '';
+  document.body.classList.toggle('side-open', open);
+}
+
+(function sideSwipe() {
+  const EDGE = 28;   // cerrada sólo agarra desde el borde derecho; abierta, en cualquier parte
+  const MIN = 8;     // px para decidir si el gesto es horizontal o es scroll
+  let x0 = 0, y0 = 0, dx = 0, w = 300, tracking = false, axis = '';
+
+  // no robarle el dedo al seek, al handle de arrastre ni a un diálogo abierto
+  const skip = el => !!(el && el.closest && el.closest('input, dialog, .tr-handle, .pl-handle'));
+  const pos = () => Math.max(0, Math.min(w, (sideOpen() ? 0 : w) + dx));
+
+  document.addEventListener('touchstart', e => {
+    tracking = false;
+    if (e.touches.length !== 1 || skip(e.target)) return;
+    const t = e.touches[0];
+    if (!sideOpen() && t.clientX < window.innerWidth - EDGE) return;
+    x0 = t.clientX; y0 = t.clientY; dx = 0; axis = ''; tracking = true;
+    w = sideEl.getBoundingClientRect().width || 300;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!tracking) return;
+    const t = e.touches[0];
+    dx = t.clientX - x0;
+    const dy = t.clientY - y0;
+    if (!axis) {
+      if (Math.abs(dx) < MIN && Math.abs(dy) < MIN) return;
+      axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      if (axis === 'y') { tracking = false; return; }   // era scroll vertical: soltar
+      sideEl.classList.add('dragging');
+      scrimEl.classList.add('dragging');
+    }
+    e.preventDefault();   // el dedo maneja la barra, no el scroll de la página
+    const x = pos();
+    sideEl.style.transform = `translateX(${x}px)`;
+    scrimEl.style.opacity = String(1 - x / w);
+  }, { passive: false });
+
+  document.addEventListener('touchend', () => {
+    if (!tracking) return;
+    tracking = false;
+    if (axis !== 'x') return;
+    // gesto rápido: manda la dirección; gesto corto: dónde quedó la barra
+    setSide(Math.abs(dx) > 60 ? dx < 0 : pos() < w / 2);
+  });
+  document.addEventListener('touchcancel', () => {
+    if (!tracking) return;
+    tracking = false;
+    setSide(sideOpen());
+  });
+})();
+
 /* ---------------- reproducción ---------------- */
-function playId(id) {
+function playId(id, from) {
   const t = tracks.get(id);
   if (!t) return;
+  playingFrom = from === undefined ? activeList : from;
   if (objectUrl) URL.revokeObjectURL(objectUrl);
   objectUrl = URL.createObjectURL(t.blob);
   currentId = id;
@@ -375,25 +602,26 @@ function playId(id) {
 }
 
 function step(dir) {
-  if (!order.length) return;
-  if (shuffle && dir === 1 && order.length > 1) {
+  const q = queue();
+  if (!q.length) return;
+  if (shuffle && dir === 1 && q.length > 1) {
     let id;
-    do { id = order[Math.floor(Math.random() * order.length)]; } while (id === currentId);
-    return playId(id);
+    do { id = q[Math.floor(Math.random() * q.length)]; } while (id === currentId);
+    return playId(id, playingFrom);
   }
-  const i = order.indexOf(currentId);
+  const i = q.indexOf(currentId);
   let n = i === -1 ? 0 : i + dir;
-  if (n < 0) n = order.length - 1;
-  if (n >= order.length) {
+  if (n < 0) n = q.length - 1;
+  if (n >= q.length) {
     if (repeat === 'off' && dir === 1) { audio.pause(); updateNowPlaying(); return; }
     n = 0;
   }
-  playId(order[n]);
+  playId(q[n], playingFrom);
 }
 
 function togglePlay() {
-  if (!currentId) { if (order.length) playId(order[0]); return; }
-  if (!audio.src) return playId(currentId);
+  if (!currentId) { const q = viewIds(); if (q.length) playId(q[0]); return; }
+  if (!audio.src) return playId(currentId, playingFrom);
   if (audio.paused) audio.play(); else audio.pause();
 }
 
@@ -478,14 +706,22 @@ async function removeTrack(id) {
   tracks.delete(id);
   order = order.filter(x => x !== id);
   saveOrder();
+  let inSome = false;
+  for (const p of playlists) {
+    const n = p.ids.length;
+    p.ids = p.ids.filter(x => x !== id);
+    if (p.ids.length !== n) inSome = true;
+  }
+  if (inSome) savePlaylists();
   render();
 }
 
-/* ---------------- reordenar (drag en el handle) ---------------- */
-function enableDrag(li, handle) {
+/* ---------------- reordenar (drag en el handle) ----------------
+   Sirve igual para los tracks de la lista y para las playlists de la barra:
+   el que llama pasa el contenedor y qué hacer con el orden nuevo. */
+function enableDrag(li, handle, list, onDrop) {
   handle.addEventListener('pointerdown', e => {
     e.preventDefault();
-    const list = $('#playlist');
     li.classList.add('drag');
     const move = ev => {
       const y = ev.clientY;
@@ -496,9 +732,7 @@ function enableDrag(li, handle) {
     const up = () => {
       document.removeEventListener('pointermove', move);
       li.classList.remove('drag');
-      order = [...list.children].map(x => x.dataset.id);
-      saveOrder();
-      updateStats();
+      onDrop([...list.children].map(x => x.dataset.id || x.dataset.pl));
     };
     document.addEventListener('pointermove', move);
     document.addEventListener('pointerup', up, { once: true });
@@ -624,6 +858,19 @@ $('#btnTest').addEventListener('click', async () => {
 });
 $('#btnImport').addEventListener('click', importFolder);
 
+/* ---------------- eventos de playlists ---------------- */
+$('#btnLists').addEventListener('click', () => setSide(!sideOpen()));
+$('#scrim').addEventListener('click', () => setSide(false));
+$('#btnNewList').addEventListener('click', () => {
+  const p = newList();
+  if (p) selectList(p.id);   // recién creada, se abre: es lo que se venía a hacer
+});
+$('#btnPickNew').addEventListener('click', () => {
+  if (newList(addTrackId)) { renderAddDlg(); render(); }
+});
+$('#btnPickClose').addEventListener('click', () => $('#dlgAdd').close());
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && sideOpen()) setSide(false); });
+
 /* ---------------- eventos UI ---------------- */
 $('#btnAdd').addEventListener('click', () => {
   if (cancelDl) { const c = cancelDl; cancelDl = null; $('#btnAdd').disabled = true; c(); return; }
@@ -657,6 +904,14 @@ $('#btnRepeat').addEventListener('click', () => {
   order = order.filter(id => tracks.has(id));
   for (const t of all) if (!order.includes(t.id)) order.push(t.id);
   saveOrder();
+  try { playlists = JSON.parse(localStorage.getItem('xc-playlists')) || []; } catch { playlists = []; }
+  if (!Array.isArray(playlists)) playlists = [];
+  playlists = playlists
+    .filter(p => p && typeof p.id === 'string' && typeof p.name === 'string')
+    .map(p => ({ id: p.id, name: p.name, ids: Array.isArray(p.ids) ? p.ids : [] }));
+  const savedList = localStorage.getItem('xc-list');
+  activeList = savedList && plById(savedList) ? savedList : null;
+  playingFrom = activeList;
   const last = localStorage.getItem('xc-last');
   if (last && tracks.has(last)) currentId = last;
   render();

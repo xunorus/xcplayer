@@ -19,6 +19,7 @@
     <span class="sub">cross country player · <span id="appVer"></span></span>
   </div>
   <button id="btnSettings" class="icon-btn" title="Ajustes">⚙</button>
+  <button id="btnLists" class="icon-btn" title="Playlists">☰</button>
 </header>
 
 <section class="stats">
@@ -36,6 +37,10 @@
 </section>
 
 <main>
+  <div class="list-bar">
+    <span id="listName" class="lb-name">Biblioteca</span>
+    <span id="listCount" class="lb-count"></span>
+  </div>
   <ul id="playlist" class="playlist"></ul>
   <p id="empty" class="empty">Sin música todavía.<br>Pegá un link arriba para despegar 🪂</p>
 </main>
@@ -58,6 +63,30 @@
     <button id="btnRepeat" class="ctl small" title="Repetir">🔁</button>
   </div>
 </footer>
+
+<div id="scrim" class="scrim"></div>
+
+<aside id="side" class="side">
+  <div class="side-head">
+    <h2>Playlists</h2>
+    <button id="btnNewList" class="side-add" title="Nueva playlist">＋</button>
+  </div>
+  <ul id="libRow" class="lists"></ul>
+  <p id="noLists" class="side-empty" hidden>Todavía no hay playlists.<br>Tocá ＋ para crear una y sumale tracks con el ＋ de cada canción.</p>
+  <ul id="lists" class="lists"></ul>
+  <p class="side-hint">Deslizá desde el borde derecho para abrir, y hacia la derecha para cerrar. Con ≡ se ordenan.</p>
+</aside>
+
+<dialog id="dlgAdd">
+  <h2>Agregar a playlist</h2>
+  <p id="dlgAddTrack" class="hint"></p>
+  <ul id="pickList" class="pick"></ul>
+  <p id="pickEmpty" class="hint" hidden>No hay playlists todavía.</p>
+  <div class="dlg-actions">
+    <button id="btnPickNew">Nueva playlist…</button>
+    <button id="btnPickClose" class="primary">Listo</button>
+  </div>
+</dialog>
 
 <dialog id="dlgSettings">
   <h2>Ajustes <span class="ver" id="appVer2"></span></h2>

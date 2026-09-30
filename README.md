@@ -99,6 +99,25 @@ y reproduce offline, sin server ni red.
 - Muestra: cantidad de tracks, duración total y espacio usado. Permite eliminar y
   reordenar (arrastrar desde el handle ≡).
 
+### Playlists (v1.13)
+
+La **biblioteca** es todo lo descargado; una **playlist** es sólo una lista de ids
+en `localStorage` (`xc-playlists`), así que un mismo mp3 puede estar en varias sin
+ocupar más espacio — el blob vive una sola vez en IndexedDB.
+
+- La **barra lateral derecha** (botón ☰, o deslizando desde el borde derecho de la
+  pantalla) lista la biblioteca y las playlists, las crea, renombra, borra y
+  **reordena** con el handle ≡. Se cierra con swipe hacia la derecha, tocando
+  afuera o con Escape. El gesto sólo agarra si es horizontal, así que no le roba
+  el dedo al scroll, al seek ni al arrastre de tracks.
+- El **＋** de cada track lo suma o lo saca de una playlist (el mismo diálogo hace
+  las dos cosas). Si se descarga algo con una playlist abierta, entra ahí además
+  de a la biblioteca.
+- El **✕** cambia según dónde estés: en la biblioteca **borra el mp3** (y lo saca
+  de todas las playlists); dentro de una playlist sólo **lo quita de esa lista**.
+- La cola de reproducción sigue a la lista desde la que arrancó el track: cambiar
+  de vista mientras suena algo no cambia lo que viene después.
+
 ## Uso
 
 ```bash

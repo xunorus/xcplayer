@@ -47,6 +47,7 @@ header {
   margin-left: auto; background: none; border: none; color: var(--dim);
   font-size: 1.4rem; cursor: pointer; padding: 8px;
 }
+.icon-btn + .icon-btn { margin-left: 0; }
 
 /* ---------- stats ---------- */
 .stats { display: flex; gap: 10px; padding: 4px 16px 12px; }
@@ -99,7 +100,13 @@ li.playing .tr-title { color: var(--accent); }
   padding: 8px 6px; cursor: pointer;
 }
 .tr-del:active { color: var(--danger); }
+.tr-add:active { color: var(--accent); }
 .tr-handle { cursor: grab; touch-action: none; font-size: 1.2rem; }
+
+/* la lista que se está mirando: biblioteca o una playlist */
+.list-bar { display: flex; align-items: baseline; gap: 8px; padding: 0 4px 10px; }
+.lb-name { font-size: .95rem; font-weight: 600; }
+.lb-count { font-size: .68rem; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; margin-left: auto; }
 
 /* barras de "reproduciendo" */
 .eq { display: none; align-items: flex-end; gap: 2px; height: 16px; width: 16px; flex: none; }
@@ -137,6 +144,67 @@ li.playing.paused .eq i { animation-play-state: paused; }
 }
 .ctl.small { font-size: 1.05rem; color: var(--dim); }
 .ctl.small.on { color: var(--accent2); }
+
+/* ---------- barra lateral de playlists ----------
+   Fija a la derecha y fuera de pantalla; se abre con translateX. Mientras el
+   dedo la arrastra manda el transform inline y .dragging apaga la transición
+   para que no le pelee al gesto. */
+.scrim {
+  position: fixed; inset: 0; z-index: 20; background: rgba(4, 9, 18, .55);
+  opacity: 0; pointer-events: none; transition: opacity .28s ease;
+}
+body.side-open .scrim { opacity: 1; pointer-events: auto; }
+.side {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 21;
+  width: min(80vw, 300px);
+  display: flex; flex-direction: column;
+  background: #0e1a30; border-left: 1px solid #22344f;
+  box-shadow: -18px 0 44px rgba(0, 0, 0, .5);
+  padding: calc(14px + env(safe-area-inset-top)) 12px calc(10px + env(safe-area-inset-bottom));
+  transform: translateX(100%);
+  transition: transform .28s cubic-bezier(.22, .61, .36, 1);
+  will-change: transform;
+}
+body.side-open .side { transform: translateX(0); }
+.side.dragging, .scrim.dragging { transition: none; }
+
+.side-head { display: flex; align-items: center; gap: 8px; padding: 0 4px 10px; }
+.side-head h2 { font-size: 1rem; }
+.side-add {
+  margin-left: auto; background: var(--accent); color: #06263a; border: none;
+  border-radius: 50%; width: 32px; height: 32px; font-size: 1rem; font-weight: 700;
+  line-height: 1; cursor: pointer;
+}
+.lists { list-style: none; }
+#lists { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.pl {
+  display: flex; align-items: center; gap: 8px; user-select: none;
+  background: var(--card); border-radius: 12px; padding: 8px 4px 8px 10px; margin-bottom: 6px;
+}
+.pl.on { background: var(--card2); outline: 1px solid #2c4a75; }
+.pl.drag { opacity: .85; outline: 2px dashed var(--accent); }
+.pl-ico { flex: none; font-size: .9rem; cursor: pointer; }
+.pl-main { flex: 1; min-width: 0; cursor: pointer; }
+.pl-name { font-size: .88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl.on .pl-name { color: var(--accent); }
+.pl-meta { font-size: .66rem; color: var(--dim); margin-top: 1px; }
+.pl-btn { background: none; border: none; color: var(--dim); font-size: .95rem; padding: 6px 4px; cursor: pointer; }
+.pl-del:active { color: var(--danger); }
+.pl-handle { cursor: grab; touch-action: none; font-size: 1.1rem; }
+.side-empty { font-size: .76rem; color: var(--dim); line-height: 1.6; padding: 6px 6px 10px; }
+.side-hint { font-size: .66rem; color: var(--dim); line-height: 1.5; padding: 8px 4px 0; border-top: 1px solid #1b2b47; }
+
+/* ---------- elegir playlist ---------- */
+.pick { list-style: none; max-height: 46vh; overflow-y: auto; }
+.pick-row {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  background: var(--card); border: 1px solid #24344f; border-radius: 10px;
+  color: var(--text); font-size: .88rem; padding: 10px 12px; margin-bottom: 6px; cursor: pointer;
+}
+.pick-row.on { border-color: var(--accent); }
+.pick-ck { flex: none; width: 14px; color: var(--accent); }
+.pick-name { flex: 1; min-width: 0; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pick-n { flex: none; font-size: .7rem; color: var(--dim); }
 
 /* ---------- dialog ---------- */
 dialog {
