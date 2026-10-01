@@ -1,7 +1,7 @@
 /* XC Player — vanilla JS. Tracks en IndexedDB (blobs mp3), orden en localStorage. */
 'use strict';
 
-const APP_VERSION = '1.13';
+const APP_VERSION = '1.14';
 
 // Cliente de YouTube que no exige PO token (evita "403 Forbidden" al bajar el audio).
 // Si YouTube lo rompe: probar otro (android_vr, tv, ios) y "Actualizar yt-dlp" en Ajustes.
@@ -380,13 +380,15 @@ function updateStats() {
   $('#statSize').textContent = fmtBytes(size);
 }
 
+const setIcon = (sel, name) => $(sel + ' use').setAttribute('href', '#i-' + name);
+
 function updateNowPlaying() {
   const t = tracks.get(currentId);
   $('#npTitle').textContent = t ? t.title : '—';
-  $('#btnPlay').textContent = audio.paused ? '▶' : '⏸';
+  setIcon('#btnPlay', audio.paused ? 'play' : 'pause');
+  setIcon('#btnRepeat', repeat === 'one' ? 'repeat1' : 'repeat');
   $('#btnShuffle').classList.toggle('on', shuffle);
   $('#btnRepeat').classList.toggle('on', repeat !== 'off');
-  $('#btnRepeat').textContent = repeat === 'one' ? '🔂' : '🔁';
 }
 
 /* ---------------- playlists ----------------
@@ -838,11 +840,11 @@ $('#btnUpdateYt').addEventListener('click', async () => {
     msg.textContent = '✗ ' + (e.message || e);
   }
 });
-$('#btnCloseSettings').addEventListener('click', () => {
+dlg.addEventListener('close', () => {
   const v = $('#serverInput').value.trim();
   if (v) localStorage.setItem('xc-server', v);
-  dlg.close();
 });
+$('#btnCloseSettings').addEventListener('click', () => dlg.close());
 $('#btnTest').addEventListener('click', async () => {
   const v = $('#serverInput').value.trim().replace(/\/$/, '');
   if (v) localStorage.setItem('xc-server', v);
@@ -870,6 +872,16 @@ $('#btnPickNew').addEventListener('click', () => {
 });
 $('#btnPickClose').addEventListener('click', () => $('#dlgAdd').close());
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && sideOpen()) setSide(false); });
+
+/* Botón atrás de Android. Capacitor no lo reenvía al WebView, así que lo
+   engancha MainActivity: si acá hay algo abierto lo cierra y devuelve true;
+   si no, Android hace lo suyo (salir de la app). */
+window.xcBack = function () {
+  const open = document.querySelector('dialog[open]');
+  if (open) { open.close(); return true; }
+  if (sideOpen()) { setSide(false); return true; }
+  return false;
+};
 
 /* ---------------- eventos UI ---------------- */
 $('#btnAdd').addEventListener('click', () => {

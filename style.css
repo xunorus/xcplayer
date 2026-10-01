@@ -133,17 +133,28 @@ li.playing.paused .eq i { animation-play-state: paused; }
 .seek-row { display: flex; align-items: center; gap: 10px; }
 .time { font-size: .7rem; color: var(--dim); min-width: 34px; text-align: center; font-variant-numeric: tabular-nums; }
 #seek { flex: 1; accent-color: var(--accent); height: 4px; }
-.controls { display: flex; justify-content: center; align-items: center; gap: 22px; padding-top: 8px; }
+/* Los controles son SVG, no emoji: Android pinta los emoji con su propia fuente
+   de color e ignora el `color` del CSS, así que el estado activo no se veía. */
+.controls { display: flex; justify-content: center; align-items: center; gap: 10px; padding-top: 8px; }
 .ctl {
-  background: none; border: none; color: var(--text); font-size: 1.5rem; cursor: pointer;
-  line-height: 1; padding: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 46px; height: 46px; padding: 0; border: none; border-radius: 50%;
+  background: none; color: var(--text); cursor: pointer;
+  transition: transform .12s ease, background-color .15s ease, color .15s ease;
 }
+.ctl .ico { width: 26px; height: 26px; display: block; }
+.ctl:active { transform: scale(.9); }          /* el tap-highlight está apagado: el feedback lo da esto */
 .ctl.big {
-  background: var(--accent); color: #06263a; border-radius: 50%;
-  width: 56px; height: 56px; font-size: 1.5rem;
+  width: 58px; height: 58px;
+  background: var(--accent); color: #06263a;
+  box-shadow: 0 6px 18px rgba(76, 195, 255, .26);
 }
-.ctl.small { font-size: 1.05rem; color: var(--dim); }
-.ctl.small.on { color: var(--accent2); }
+.ctl.big .ico { width: 28px; height: 28px; }
+.ctl.big:active { background: #7ad2ff; }
+.ctl.small { width: 40px; height: 40px; color: var(--dim); }
+.ctl.small .ico { width: 21px; height: 21px; }
+/* activo = acento + pastilla tenue: se lee de un vistazo, no sólo por el tono */
+.ctl.small.on { color: var(--accent2); background: rgba(251, 146, 60, .16); }
 
 /* ---------- barra lateral de playlists ----------
    Fija a la derecha y fuera de pantalla; se abre con translateX. Mientras el
