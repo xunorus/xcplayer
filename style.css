@@ -58,6 +58,18 @@ header {
 .chip span { font-size: 1.05rem; font-weight: 600; color: var(--accent); display: block; }
 .chip label { font-size: .68rem; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; }
 
+/* el chip de la vista activa abre la barra lateral: se ve pulsable y el nombre
+   de la playlist se recorta en vez de desarmar la fila de chips */
+.chip-list {
+  border: 1px solid #24344f; font: inherit; color: inherit; cursor: pointer;
+  display: block; transition: transform .12s, border-color .12s;
+}
+.chip-list:active { transform: scale(.96); border-color: var(--accent); }
+.chip-list span {
+  font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.chip-list label { cursor: pointer; }
+
 /* ---------- add ---------- */
 .add { padding: 0 16px 12px; }
 .add-row { display: flex; gap: 8px; }
@@ -104,9 +116,6 @@ li.playing .tr-title { color: var(--accent); }
 .tr-handle { cursor: grab; touch-action: none; font-size: 1.2rem; }
 
 /* la lista que se está mirando: biblioteca o una playlist */
-.list-bar { display: flex; align-items: baseline; gap: 8px; padding: 0 4px 10px; }
-.lb-name { font-size: .95rem; font-weight: 600; }
-.lb-count { font-size: .68rem; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; margin-left: auto; }
 
 /* barras de "reproduciendo" */
 .eq { display: none; align-items: flex-end; gap: 2px; height: 16px; width: 16px; flex: none; }

@@ -3,6 +3,7 @@ package com.xunorus.xcplayer;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
+import android.os.StatFs;
 import android.provider.Settings;
 
 import androidx.core.content.FileProvider;
@@ -46,6 +47,21 @@ public class UpdaterPlugin extends Plugin {
         ev.put("phase", phase);
         ev.put("pct", pct);
         notifyListeners("updateProgress", ev);
+    }
+
+    /** Espacio del almacenamiento interno, para mostrar "X MB de Y" en la app. */
+    @PluginMethod
+    public void storage(PluginCall call) {
+        JSObject ret = new JSObject();
+        try {
+            StatFs st = new StatFs(getContext().getFilesDir().getAbsolutePath());
+            ret.put("total", st.getTotalBytes());
+            ret.put("free", st.getAvailableBytes());
+        } catch (Exception e) {
+            ret.put("total", 0);
+            ret.put("free", 0);
+        }
+        call.resolve(ret);
     }
 
     @PluginMethod

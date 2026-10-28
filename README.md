@@ -96,27 +96,47 @@ Dos modos de descarga (se elige en ⚙ Ajustes; el APK usa "teléfono" por defec
 
 En ambos casos cada mp3 queda guardado **localmente en el dispositivo** (IndexedDB)
 y reproduce offline, sin server ni red.
-- Muestra: cantidad de tracks, duración total y espacio usado. Permite eliminar y
+- Muestra: vista activa y cuántos tracks tiene, duración total y espacio usado
+  sobre el total del dispositivo ("15.0 MB de 118 GB"). Permite eliminar y
   reordenar (arrastrar desde el handle ≡).
 
 ### Playlists (v1.13)
 
-La **biblioteca** es todo lo descargado; una **playlist** es sólo una lista de ids
-en `localStorage` (`xc-playlists`), así que un mismo mp3 puede estar en varias sin
-ocupar más espacio — el blob vive una sola vez en IndexedDB.
+Una **playlist** es sólo una lista de ids en `localStorage` (`xc-playlists`), así
+que un mismo mp3 puede estar en varias sin ocupar más espacio — el blob vive una
+sola vez en IndexedDB.
 
-- La **barra lateral derecha** (botón ☰, o deslizando desde el borde derecho de la
-  pantalla) lista la biblioteca y las playlists, las crea, renombra, borra y
-  **reordena** con el handle ≡. Se cierra con swipe hacia la derecha, tocando
-  afuera o con Escape. El gesto sólo agarra si es horizontal, así que no le roba
-  el dedo al scroll, al seek ni al arrastre de tracks.
+La pantalla principal funciona como **bandeja**: muestra lo que *no* está en
+ninguna playlist. Archivar un track lo saca de ahí, y sacarlo de su última
+playlist lo devuelve. Lo que se baja cae a la bandeja y se va clasificando.
+
+Hay tres clases de vista, y el `✕` significa distinto en cada una:
+
+| Vista | Qué muestra | Qué hace el ✕ |
+|---|---|---|
+| **Sin playlist** (la principal) | lo que no está archivado | borra el mp3 de la app |
+| **Todo** | todos los tracks | borra el mp3 de la app |
+| una playlist | sus tracks | lo quita de esa lista (vuelve a la bandeja) |
+
+`Todo` existe justamente para poder borrar algo que ya está archivado, sin tener
+que sacarlo antes de cada playlist.
+
+- El **primer chip** dice qué vista está abierta y cuántos tracks tiene, y es a
+  la vez el atajo a la barra lateral: se toca y se abre. Los otros dos chips
+  (duración y espacio) siguen contando la vista.
+- La **barra lateral derecha** (el chip, el botón ☰, o deslizando desde el borde derecho)
+  tiene las dos vistas fijas arriba y abajo las playlists, que se crean,
+  renombran, borran y **reordenan** con el handle ≡. Se cierra con swipe hacia la
+  derecha, tocando afuera, con Escape o con el botón atrás del teléfono. El gesto
+  sólo agarra si es horizontal, así que no le roba el dedo al scroll, al seek ni
+  al arrastre de tracks.
 - El **＋** de cada track lo suma o lo saca de una playlist (el mismo diálogo hace
-  las dos cosas). Si se descarga algo con una playlist abierta, entra ahí además
-  de a la biblioteca.
-- El **✕** cambia según dónde estés: en la biblioteca **borra el mp3** (y lo saca
-  de todas las playlists); dentro de una playlist sólo **lo quita de esa lista**.
-- La cola de reproducción sigue a la lista desde la que arrancó el track: cambiar
-  de vista mientras suena algo no cambia lo que viene después.
+  las dos cosas). Si se descarga algo con una playlist abierta, entra ahí.
+- Reordenar la bandeja reacomoda sólo las posiciones visibles de `order` y deja
+  las ocultas donde estaban: si no, los tracks archivados se perderían del orden.
+- La cola de reproducción sigue a la lista desde la que arrancó el track, y si lo
+  que suena se archiva (y por lo tanto sale de la bandeja), "siguiente" toma al
+  que ocupó su lugar en vez de saltar al principio.
 
 ## Uso
 
